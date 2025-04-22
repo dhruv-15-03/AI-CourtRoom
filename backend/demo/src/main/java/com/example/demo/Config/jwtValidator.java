@@ -1,4 +1,4 @@
-package com.example.demo.config;
+package com.example.demo.Config;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.example.demo.config.constant.header;
+import static com.example.demo.Config.constant.header;
 
 public class jwtValidator extends OncePerRequestFilter {
 
@@ -24,9 +24,9 @@ public class jwtValidator extends OncePerRequestFilter {
         String jwt=request.getHeader(header);
         if(jwt!=null){
             try{
-              String username=JwtProvider.getUserNameFromJwt(jwt);
+              String email=JwtProvider.getEmailFromJwt(jwt);
                 List<GrantedAuthority> authorities=new ArrayList<>();
-                Authentication authentication=new UsernamePasswordAuthenticationToken(username,null,authorities);
+                Authentication authentication=new UsernamePasswordAuthenticationToken(email,null,authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }catch (Exception e){
                 throw new BadCredentialsException("Invalid token.....");

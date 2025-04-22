@@ -1,4 +1,4 @@
-package com.example.demo.config;
+package com.example.demo.Config;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -18,12 +18,12 @@ public class JwtProvider {
 
     public static String generateToken(Authentication authentication){
         return Jwts.builder().issuer("Dhruv").issuedAt(new Date()).expiration(new Date(new Date().getTime() + 86400000))
-                .claim("userName",authentication.getName())
+                .claim("email",authentication.getName())
                 .signWith(key).compact();
     }
-    public static String getUserNameFromJwt(String jwt){
+    public static String getEmailFromJwt(String jwt){
         jwt=jwt.substring(7);
         Claims claims= Jwts.parser().setSigningKey(key).build().parseSignedClaims(jwt).getPayload();
-        return String.valueOf(claims.get("userName"));
+        return String.valueOf(claims.get("email"));
     }
 }

@@ -1,4 +1,4 @@
-package com.example.demo.config;
+package com.example.demo.Config;
 
 public class constant {
     public static String header="Authorization" ;

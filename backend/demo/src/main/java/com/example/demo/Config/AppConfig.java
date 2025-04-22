@@ -1,4 +1,4 @@
-package com.example.demo.config;
+package com.example.demo.Config;
 
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,7 +26,7 @@ public class AppConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
         http.sessionManagement(management-> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.authorizeHttpRequests(Authorize -> Authorize.requestMatchers("/api/**").authenticated().anyRequest().permitAll())
-                .addFilterBefore(new jwtValidator(), BasicAuthenticationFilter.class)
+                .addFilterBefore(new com.example.demo.Config.jwtValidator(), BasicAuthenticationFilter.class)
                 .csrf().disable()
                 .cors(cors-> cors.configurationSource(corsConfigurationSource()));
         return http.build();
@@ -38,7 +38,7 @@ public class AppConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:8081",
                 "http://localhost:3000",
-                "https://dhr-social.vercel.app"
+                "https://ai-court-room.vercel.app/"
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

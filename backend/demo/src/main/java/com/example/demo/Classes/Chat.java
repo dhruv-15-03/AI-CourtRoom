@@ -1,31 +1,29 @@
 package com.example.demo.Classes;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+import java.util.Set;
+
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-public class Message {
+public class Chat {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
-    private String message;
-    @ManyToOne
+    @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<Message> message;
     @JsonBackReference
-    private Chat chat;
-    @ManyToOne
-    @JsonBackReference
-    private User user;
-    public Message(String message,Chat chat,User user){
-        this.message=message;
-        this.chat=chat;
-        this.user=user;
-    }
+    @ManyToMany
+    private Set<User> users;
 }
