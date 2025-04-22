@@ -31,6 +31,10 @@ export default function Sidebar({ mode, setMode }) {
           <ListItemIcon><ForumIcon /></ListItemIcon>
           <ListItemText primary="Legal Chatbot" />
         </ListItemButton>
+        <ListItemButton onClick={() => navigate('/cases')}>
+          <ListItemIcon><AccountCircleIcon /></ListItemIcon>
+          <ListItemText primary="Cases" />
+        </ListItemButton>
         <ListItemButton onClick={() => navigate('/my-profile')}>
           <ListItemIcon><AccountCircleIcon /></ListItemIcon>
           <ListItemText primary="My Profile" />

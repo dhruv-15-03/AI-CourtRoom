@@ -27,8 +27,8 @@ const dummyProfileData = {
   lastName: 'Doe',
   email: 'johndoe@example.com',
   mobile: '9876543210',
-  role: 'User',
-  password:'**********',
+  role: 'user',
+  password: '**********',
   avatar: '/avatars/avatar1.png',
 };
 
@@ -36,6 +36,9 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({});
+  const [enrollmentModalOpen, setEnrollmentModalOpen] = useState(false);
+  const [enrollmentNo, setEnrollmentNo] = useState('');
+  const [enrollmentError, setEnrollmentError] = useState('');
 
   useEffect(() => {
     setProfile(dummyProfileData);
@@ -46,11 +49,17 @@ export default function ProfilePage() {
   const handleClose = () => setOpen(false);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === 'role' && value === 'lawyer') {
+      setEnrollmentModalOpen(true);
+    }
+
+    setForm({ ...form, [name]: value });
   };
 
   const handleSave = () => {
-    setProfile(form); 
+    setProfile(form);
     setOpen(false);
   };
 
@@ -58,20 +67,32 @@ export default function ProfilePage() {
 
   return (
     <Container maxWidth="sm" sx={{ mt: 4 }}>
-      <Card sx={{alignItems:'centre'}}>
+      <Card>
         <CardContent>
           <Box display="flex" justifyContent="center" mb={2}>
             <Avatar src={profile.avatar} sx={{ width: 100, height: 100 }} />
           </Box>
-          <Typography variant="h6" align="center">{profile.firstName} {profile.lastName}</Typography>
-          <Typography align="center" color="textSecondary">{profile.role}</Typography>
+          <Typography variant="h6" align="center">
+            {profile.firstName} {profile.lastName}
+          </Typography>
+          <Typography align="center" color="textSecondary">
+            {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
+          </Typography>
           <Box mt={2}>
-            <Typography><b>Email:</b> {profile.email}</Typography>
-            <Typography><b>Mobile:</b> {profile.mobile}</Typography>
-            <Typography><b>Password:</b> *********</Typography>
+            <Typography>
+              <b>Email:</b> {profile.email}
+            </Typography>
+            <Typography>
+              <b>Mobile:</b> {profile.mobile}
+            </Typography>
+            <Typography>
+              <b>Password:</b> *********
+            </Typography>
           </Box>
           <Box textAlign="center" mt={3}>
-            <Button variant="outlined" onClick={handleOpen}>Edit Profile</Button>
+            <Button variant="outlined" onClick={handleOpen}>
+              Edit Profile
+            </Button>
           </Box>
         </CardContent>
       </Card>
@@ -127,21 +148,18 @@ export default function ProfilePage() {
             </Grid>
             <Grid item xs={12}>
               <TextField
-                      select
-                      label="Role"
-                      value={form.role}
-                      onChange={handleChange}
-                      fullWidth
-                      sx={
-                        {width: '100px'}
-                    }
-                      margin="normal"
-                      required
-                    >
-                      <MenuItem value="user">User</MenuItem>
-                      <MenuItem value="lawyer">Lawyer</MenuItem>
-                      <MenuItem value="judge">Judge</MenuItem>
-                    </TextField>
+                select
+                label="Role"
+                name="role"
+                value={form.role}
+                onChange={handleChange}
+                fullWidth
+                required
+              >
+                <MenuItem value="user">User</MenuItem>
+                <MenuItem value="lawyer">Lawyer</MenuItem>
+                <MenuItem value="judge">Judge</MenuItem>
+              </TextField>
             </Grid>
             <Grid item xs={12}>
               <TextField
@@ -151,9 +169,6 @@ export default function ProfilePage() {
                 name="avatar"
                 value={form.avatar}
                 onChange={handleChange}
-                sx={
-                    {width: '160px'}
-                }
               >
                 {presetAvatars.map((url, index) => (
                   <MenuItem key={index} value={url}>
@@ -168,7 +183,50 @@ export default function ProfilePage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave}>Save</Button>
+          <Button variant="contained" onClick={handleSave}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={enrollmentModalOpen} onClose={() => setEnrollmentModalOpen(false)}>
+        <DialogTitle>Lawyer Enrollment</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Enrollment Number"
+            fullWidth
+            value={enrollmentNo}
+            onChange={(e) => setEnrollmentNo(e.target.value)}
+            error={!!enrollmentError}
+            helperText={enrollmentError}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setEnrollmentModalOpen(false);
+              setForm({ ...form, role: 'user' });
+              setEnrollmentNo('');
+              setEnrollmentError('');
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (enrollmentNo === 'LAWYER123') {
+                setEnrollmentModalOpen(false);
+                setEnrollmentError('');
+              } else {
+                setEnrollmentError('Invalid Enrollment Number');
+              }
+            }}
+          >
+            Verify
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>

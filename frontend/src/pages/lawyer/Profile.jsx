@@ -24,6 +24,7 @@ const dummyLawyer = {
   lastName: 'Patel',
   email: 'ravi@law.com',
   mobile: '9876543210',
+  description:'Best in Business',
   specialization: 'Criminal Law',
   fees: 2000,
   avatar: '/avatars/avatar2.png',
@@ -109,6 +110,9 @@ export default function Profile() {
                 <strong>Fees:</strong> ₹{lawyer.fees}
               </Typography>
             </Box>
+            <Typography align="center" color="textSecondary" mb={3}>
+              {lawyer.description}
+            </Typography>
             <Box textAlign="center">
               <Button variant="contained" onClick={() => setOpen(true)}>
                 Edit Profile
@@ -121,7 +125,7 @@ export default function Profile() {
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              {['firstName', 'lastName', 'email', 'mobile', 'specialization', 'fees'].map((name) => (
+              {['firstName', 'lastName', 'email', 'mobile','description', 'specialization', 'fees'].map((name) => (
                 <Grid item xs={12} sm={name === 'fees' ? 6 : 12} key={name}>
                   <TextField
                     fullWidth

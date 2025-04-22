@@ -25,6 +25,7 @@ import JudgeProfile from './pages/judge/JudgeProfile.jsx';
 // Auth Components
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import Cases from './pages/Cases.jsx';
 
 export default function App() {
   const [mode, setMode] = useState('light');
@@ -58,6 +59,7 @@ export default function App() {
                     <Route path="/" element={<FindLawyer />} />
                     <Route path="/ai-assistant" element={<AIAssistant />} />
                     <Route path="/chatbot" element={<Chatbot />} />
+                    <Route path="/cases" element={<Cases />} />
                     <Route path="/my-profile" element={<ProfilePage />} />
                     <Route path="/chats" element={<ChatPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
