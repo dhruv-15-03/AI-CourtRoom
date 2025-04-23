@@ -37,13 +37,17 @@ public class AuthController {
         if(check!=null){
             throw new Exception("User exist with email :" + user.getEmail());
         }
-//        newUser.setFollowers(user.getFollowers());
-//        newUser.setFollowing(user.getFollowing());
-//        newUser.setPosts(user.getPosts());
-//        newUser.setSaved(user.getSaved());
-//        newUser.setUserName(user.getUserName());
-//        newUser.setCommented(user.getCommented());
-//        newUser.setLiked(user.getLiked());
+        newUser.setDescription(user.getDescription());
+        newUser.setRole(user.getRole());
+        newUser.setBench(user.getBench());
+        newUser.setFees(user.getFees());
+        newUser.setImage(user.getImage());
+        newUser.setMobile(user.getMobile());
+        newUser.setSpecialisation(user.getSpecialisation());
+        newUser.setYears(user.getYears());
+        newUser.setCourt(user.getCourt());
+        newUser.setIsLawyer(user.getRole().equalsIgnoreCase("lawyer"));
+        newUser.setIsJudge(user.getRole().equalsIgnoreCase("judge"));
         newUser.setFirstName(user.getFirstName());
         newUser.setLastName(user.getLastName());
         newUser.setPassword(passwordEncoder.encode(user.getPassword()));

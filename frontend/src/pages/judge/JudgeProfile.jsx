@@ -18,6 +18,8 @@ import {
 
 const presetAvatars = ['/avatars/avatar1.png','/avatars/avatar2.png','/avatars/avatar3.png'];
 const dummyJudge = {
+  ID:98,
+  title:'Justice',
   firstName: 'Arun',
   lastName: 'Sinha',
   email: 'arun.sinha@court.gov',
@@ -54,8 +56,12 @@ export default function JudgeProfile({ mode, setMode }) {
           <Box display="flex" justifyContent="center" mb={2}>
             <Avatar src={judge.avatar} sx={{ width: 100, height: 100 }} />
           </Box>
+          
           <Typography align="center" variant="h5" className="font-semibold">
-            {judge.firstName} {judge.lastName}
+            {judge.title} {judge.lastName}
+          </Typography>
+          <Typography align="center" variant="h5" className="font-semibold">
+            ID - {judge.ID}
           </Typography>
           <Typography align="center" color="textSecondary" mb={3}>
             {judge.bench} Bench, {judge.years} yrs
@@ -76,7 +82,7 @@ export default function JudgeProfile({ mode, setMode }) {
         <DialogTitle>Edit Profile</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} className="mt-2">
-            {['firstName','lastName','email','mobile','bench','years'].map((name) => (
+            {['ID','title','firstName','lastName','email','mobile','bench','years'].map((name) => (
               <Grid item xs={12} sm={name==='years'?6:12} key={name}>
                 <TextField
                   fullWidth

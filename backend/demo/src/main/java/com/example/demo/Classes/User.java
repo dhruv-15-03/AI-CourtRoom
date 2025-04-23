@@ -45,7 +45,8 @@ public class User {
     private String image;
     private String bench;
     private Integer years;
-    public User(Long mobile,String firstName,String lastName,String email,String role,String password,String description,String specialisation, Integer fees, String image,String bench,Integer years){
+    private  String court;
+    public User(Long mobile,String firstName,String lastName,String email,String role,String password,String description,String specialisation, Integer fees, String image,String bench,Integer years,String court){
         if(role.equalsIgnoreCase("Lawyer")){
             isLawyer=true;
         }
@@ -57,6 +58,7 @@ public class User {
         this.lastName=lastName;
         this.email=email;
         this.role=role;
+        this.court=court;
         this.password=password;
         this.description=description;
         this.specialisation=specialisation;

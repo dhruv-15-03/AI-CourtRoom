@@ -14,6 +14,8 @@ import {
   DialogActions,
   TextField,
   MenuItem,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 
 const presetAvatars = [
@@ -39,6 +41,12 @@ export default function ProfilePage() {
   const [enrollmentModalOpen, setEnrollmentModalOpen] = useState(false);
   const [enrollmentNo, setEnrollmentNo] = useState('');
   const [enrollmentError, setEnrollmentError] = useState('');
+  const [judgeModalOpen, setJudgeModalOpen] = useState(false);
+  const [judgeType, setJudgeType] = useState('District');
+  const [districtId, setDistrictId] = useState('');
+  const [higherTitle, setHigherTitle] = useState('Justice');
+  const [surname, setSurname] = useState('');
+  const [verificationError, setVerificationError] = useState('');
 
   useEffect(() => {
     setProfile(dummyProfileData);
@@ -50,11 +58,16 @@ export default function ProfilePage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    if (name === 'role' && value === 'lawyer') {
-      setEnrollmentModalOpen(true);
+    if (name === 'role') {
+      if (value === 'lawyer') {
+        setEnrollmentModalOpen(true);
+        return;
+      }
+      if (value === 'judge') {
+        setJudgeModalOpen(true);
+        return;
+      }
     }
-
     setForm({ ...form, [name]: value });
   };
 
@@ -79,15 +92,9 @@ export default function ProfilePage() {
             {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
           </Typography>
           <Box mt={2}>
-            <Typography>
-              <b>Email:</b> {profile.email}
-            </Typography>
-            <Typography>
-              <b>Mobile:</b> {profile.mobile}
-            </Typography>
-            <Typography>
-              <b>Password:</b> *********
-            </Typography>
+            <Typography><b>Email:</b> {profile.email}</Typography>
+            <Typography><b>Mobile:</b> {profile.mobile}</Typography>
+            <Typography><b>Password:</b> *********</Typography>
           </Box>
           <Box textAlign="center" mt={3}>
             <Button variant="outlined" onClick={handleOpen}>
@@ -97,7 +104,8 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Dialog open={open} onClose={handleClose}>
+      {/* Edit Profile Dialog */}
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>Edit Profile</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -142,6 +150,7 @@ export default function ProfilePage() {
                 fullWidth
                 label="Password"
                 name="password"
+                type="password"
                 value={form.password}
                 onChange={handleChange}
               />
@@ -183,13 +192,17 @@ export default function ProfilePage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave}>
-            Save
-          </Button>
+          <Button variant="contained" onClick={handleSave}>Save</Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={enrollmentModalOpen} onClose={() => setEnrollmentModalOpen(false)}>
+      {/* Lawyer Enrollment Modal */}
+      <Dialog open={enrollmentModalOpen} onClose={() => {
+        setEnrollmentModalOpen(false);
+        setForm({ ...form, role: 'user' });
+        setEnrollmentNo('');
+        setEnrollmentError('');
+      }} fullWidth maxWidth="xs">
         <DialogTitle>Lawyer Enrollment</DialogTitle>
         <DialogContent>
           <TextField
@@ -204,29 +217,98 @@ export default function ProfilePage() {
           />
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() => {
+          <Button onClick={() => {
+            setEnrollmentModalOpen(false);
+            setForm({ ...form, role: 'user' });
+            setEnrollmentNo('');
+            setEnrollmentError('');
+          }}>Cancel</Button>
+          <Button variant="contained" onClick={() => {
+            if (enrollmentNo === 'LAWYER123') {
               setEnrollmentModalOpen(false);
-              setForm({ ...form, role: 'user' });
-              setEnrollmentNo('');
               setEnrollmentError('');
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              if (enrollmentNo === 'LAWYER123') {
-                setEnrollmentModalOpen(false);
-                setEnrollmentError('');
-              } else {
-                setEnrollmentError('Invalid Enrollment Number');
-              }
-            }}
-          >
-            Verify
-          </Button>
+            } else {
+              setEnrollmentError('Invalid Enrollment Number');
+            }
+          }}>Verify</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Judge Verification Modal */}
+      <Dialog open={judgeModalOpen} onClose={() => {
+        setJudgeModalOpen(false);
+        setForm({ ...form, role: 'user' });
+        setVerificationError('');
+      }} fullWidth maxWidth="sm">
+        <DialogTitle>Judge Verification</DialogTitle>
+        <DialogContent>
+          <Box display="flex" justifyContent="center" my={2}>
+            <ToggleButtonGroup
+              value={judgeType}
+              exclusive
+              onChange={(e, val) => val && setJudgeType(val)}
+            >
+              <ToggleButton value="District">District Judge</ToggleButton>
+              <ToggleButton value="Higher">Higher Court Judge</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+          {judgeType === 'District' ? (
+            <TextField
+              fullWidth
+              margin="dense"
+              label="District Judge ID"
+              value={districtId}
+              onChange={(e) => setDistrictId(e.target.value)}
+              error={!!verificationError && judgeType==='District'}
+              helperText={judgeType==='District' ? verificationError : ''}
+            />
+          ) : (
+            <Grid container spacing={2} mt={1}>
+              <Grid item xs={6}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Title"
+                  value={higherTitle}
+                  onChange={(e) => setHigherTitle(e.target.value)}
+                >
+                  <MenuItem value="Justice">Justice</MenuItem>
+                  <MenuItem value="Chief Justice">Chief Justice</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="Surname"
+                  value={surname}
+                  onChange={(e) => setSurname(e.target.value)}
+                  error={!!verificationError && judgeType==='Higher'}
+                  helperText={judgeType==='Higher' ? verificationError : ''}
+                />
+              </Grid>
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setJudgeModalOpen(false);
+            setForm({ ...form, role: 'user' });
+            setVerificationError('');
+          }}>Cancel</Button>
+          <Button variant="contained" onClick={() => {
+            if ((judgeType === 'District' && districtId === 'D123') ||
+                (judgeType === 'Higher' && (higherTitle === 'Justice' || higherTitle === '\Chief Justice') && surname === 'Verma')) {
+              setJudgeModalOpen(false);
+              setForm({ ...form, role: 'judge' });
+              setVerificationError('');
+            } else {
+              setVerificationError(
+                judgeType === 'District'
+                  ? 'Invalid District Judge ID'
+                  : 'Invalid Higher Court credentials'
+              );
+            }
+          }}>Verify</Button>
         </DialogActions>
       </Dialog>
     </Container>

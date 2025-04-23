@@ -8,13 +8,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.Date;
-import java.util.List;
 import java.util.Set;
 
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter@Setter
+@Getter
+@Setter
 public class Case {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

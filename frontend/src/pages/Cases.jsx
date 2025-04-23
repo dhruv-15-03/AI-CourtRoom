@@ -12,13 +12,33 @@ import {
 import { WorkOutline, PersonOutline } from '@mui/icons-material';
 
 const dummyCases = [
-  
+  {
+    id: 1,
+    title: 'Property Dispute in Sector 21',
+    status: 'Active',
+    dateFiled: '2025-03-18',
+    lawyer: {
+      name: 'Adv. Meera Sharma',
+      avatar: '/avatars/avatar2.png',
+    },
+  },
+  {
+    id: 2,
+    title: 'Cyberbullying Complaint',
+    status: 'Active',
+    dateFiled: '2025-04-02',
+    lawyer: {
+      name: 'Adv. Ravi Patel',
+      avatar: '/avatars/avatar3.png',
+    },
+  },
 ];
 
 const Cases = () => {
   const [cases, setCases] = useState([]);
 
   useEffect(() => {
+    // Simulate fetch
     setTimeout(() => {
       setCases(dummyCases);
     }, 500);
