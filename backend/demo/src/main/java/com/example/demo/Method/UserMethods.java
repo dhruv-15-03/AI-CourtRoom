@@ -9,9 +9,10 @@ public interface UserMethods {
     public List<User> getLawyers();
 
     public List<User> getJudge();
-    public User update(User user);
+    public User update(User user, User user1);
     public String delete(User user);
     public List<Case> activeCase(User user);
     public List<Case> caseRequest(User user);
-    public List<Case> pendingCase(User user);
+    public List<Case> pastCases(User user);
+
 }

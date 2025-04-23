@@ -7,7 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Date;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -20,7 +21,8 @@ public class Case {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
     private String description;
-    private Date date;
+    private LocalDate date;
+    private LocalDate next;
     @ManyToMany
     @JsonBackReference
     private Set<User> user;
@@ -30,5 +32,7 @@ public class Case {
     @ManyToOne
     @JsonBackReference
     private User judge;
-    private String judgement;
+    @ElementCollection
+    private List<String> judgement;
+    private Boolean isClose;
 }

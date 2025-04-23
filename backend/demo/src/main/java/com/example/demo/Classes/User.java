@@ -45,7 +45,7 @@ public class User {
     private String image;
     private String bench;
     private Integer years;
-    private  String court;
+    private String court;
     public User(Long mobile,String firstName,String lastName,String email,String role,String password,String description,String specialisation, Integer fees, String image,String bench,Integer years,String court){
         if(role.equalsIgnoreCase("Lawyer")){
             isLawyer=true;
