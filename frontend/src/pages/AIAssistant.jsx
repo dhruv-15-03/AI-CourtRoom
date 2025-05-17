@@ -10,6 +10,7 @@ import {
   List,
   ListItem,
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 const modalStyle = {
   position: 'absolute',
@@ -26,16 +27,20 @@ const modalStyle = {
 };
 
 export default function AIAssistant() {
+
   const [attemptsLeft, setAttemptsLeft] = useState(3);
   const [conversation, setConversation] = useState([]);
+  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [open, setOpen] = useState(false);
 
   const handleStart = () => {
-    if (attemptsLeft > 0) {
-      setAttemptsLeft(attemptsLeft - 1);
-      setOpen(true);
-    }
+    navigate('/ai-chat')
+    // if (attemptsLeft > 0) {
+    //   setAttemptsLeft(attemptsLeft - 1);
+      
+    //   setOpen(true);
+    // }
   };
 
   const handleSend = () => {

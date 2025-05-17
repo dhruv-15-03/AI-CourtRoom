@@ -7,6 +7,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Sidebar from './components/Sidebar';
 import FindLawyer from './pages/FindLawyer';
 import AIAssistant from './pages/AIAssistant';
+import AIQuestionare from './pages/AIQuestionare.jsx'
 import Chatbot from './pages/Chatbot';
 import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
@@ -62,6 +63,7 @@ export default function App() {
                     <Route path="/cases" element={<Cases />} />
                     <Route path="/my-profile" element={<ProfilePage />} />
                     <Route path="/chats" element={<ChatPage />} />
+                    <Route path="/ai-chat" element={<AIQuestionare />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </>
                 )}
