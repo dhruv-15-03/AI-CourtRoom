@@ -23,14 +23,11 @@ public class Case {
     private String description;
     private LocalDate date;
     private LocalDate next;
-    @ManyToMany
-    @JsonBackReference
+    @ManyToMany(mappedBy = "active")
     private Set<User> user;
-    @ManyToMany
-    @JsonBackReference
+    @ManyToMany(mappedBy = "caseRequest")
     private Set<User> lawyer;
     @ManyToOne
-    @JsonBackReference
     private User judge;
     @ElementCollection
     private List<String> judgement;

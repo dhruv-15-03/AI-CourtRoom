@@ -2,6 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { Snackbar, Alert } from '@mui/material';
+
+// Context Providers
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // User Components
 import Sidebar from './components/Sidebar';
@@ -23,38 +27,103 @@ import CaseDetails from './pages/judge/CaseDetails.jsx';
 import Judgments from './pages/judge/Judgments.jsx';
 import JudgeProfile from './pages/judge/JudgeProfile.jsx';
 
-// Auth Components
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Cases from './pages/Cases.jsx';
 
-export default function App() {
-  const [mode, setMode] = useState('light');
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
-  const [userRole, setUserRole] = useState('user'); 
+// Common Components
+import { FullScreenLoader } from './components/common/UIComponents';
+
+function AppContent() {
+  const [mode, setMode] = useState(localStorage.getItem('theme') || 'light');
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
+  const { isAuthenticated, user, loading } = useAuth(); 
+
+  // Save theme preference
+  React.useEffect(() => {
+    localStorage.setItem('theme', mode);
+  }, [mode]);
 
   const theme = useMemo(
     () =>
       createTheme({
         palette: {
           mode,
-          background: { default: mode === 'light' ? '#f4f6f8' : '#121212' },
+          primary: {
+            main: mode === 'light' ? '#1976d2' : '#90caf9',
+          },
+          secondary: {
+            main: mode === 'light' ? '#dc004e' : '#f48fb1',
+          },
+          background: { 
+            default: mode === 'light' ? '#f5f5f5' : '#121212',
+            paper: mode === 'light' ? '#ffffff' : '#1e1e1e',
+          },
+        },
+        typography: {
+          fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+          h4: {
+            fontWeight: 600,
+          },
+          h5: {
+            fontWeight: 500,
+          },
+        },
+        components: {
+          MuiButton: {
+            styleOverrides: {
+              root: {
+                textTransform: 'none',
+                borderRadius: 8,
+              },
+            },
+          },
+          MuiCard: {
+            styleOverrides: {
+              root: {
+                borderRadius: 12,
+                boxShadow: mode === 'light' 
+                  ? '0 2px 8px rgba(0,0,0,0.1)' 
+                  : '0 2px 8px rgba(0,0,0,0.3)',
+              },
+            },
+          },
         },
       }),
     [mode]
   );
 
+  const userRole = user?.role || 'user';
+
+  // Show loading screen while checking auth
+  if (loading) {
+    return <FullScreenLoader message="Loading application..." />;
+  }
+
+  const showNotification = (message, severity = 'info') => {
+    setNotification({ open: true, message, severity });
+  };
+
+  const hideNotification = () => {
+    setNotification({ ...notification, open: false });
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        {isLoggedIn ? (
+        {isAuthenticated ? (
           <>
             {userRole === 'user' && <Sidebar mode={mode} setMode={setMode} />}
 
-            <div style={{ marginLeft: userRole === 'user' ? 240 : 0, padding: '1rem' }}>
+            <div style={{ 
+              marginLeft: userRole === 'user' ? 240 : 0, 
+              padding: '1rem',
+              minHeight: '100vh',
+              backgroundColor: theme.palette.background.default 
+            }}>
               <Routes>
-                {}
+                {/* User Routes */}
                 {userRole === 'user' && (
                   <>
                     <Route path="/" element={<FindLawyer />} />
@@ -68,12 +137,12 @@ export default function App() {
                   </>
                 )}
 
-                {}
+                {/* Lawyer Routes */}
                 {userRole === 'lawyer' && (
                   <Route path="/lawyer/*" element={<LawyerRoutes mode={mode} setMode={setMode} />} />
                 )}
 
-                {}
+                {/* Judge Routes */}
                 {userRole === 'judge' && (
                   <Route path="/judge/*" element={<JudgeLayout mode={mode} setMode={setMode} />}>                    
                     <Route index element={<Navigate to="dashboard" replace />} />
@@ -85,17 +154,45 @@ export default function App() {
                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                   </Route>
                 )}
+
+                {/* Redirect based on role */}
+                <Route path="*" element={
+                  <Navigate to={
+                    userRole === 'lawyer' ? '/lawyer/dashboard' :
+                    userRole === 'judge' ? '/judge/dashboard' : '/'
+                  } replace />
+                } />
               </Routes>
             </div>
           </>
         ) : (
           <Routes>
-            <Route path="/login" element={<LoginPage setIsLoggedIn={setIsLoggedIn} setUserRole={setUserRole} />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={<LoginPage showNotification={showNotification} />} />
+            <Route path="/register" element={<RegisterPage showNotification={showNotification} />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         )}
+
+        {/* Global Notification Snackbar */}
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={5000}
+          onClose={hideNotification}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert onClose={hideNotification} severity={notification.severity}>
+            {notification.message}
+          </Alert>
+        </Snackbar>
       </Router>
     </ThemeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

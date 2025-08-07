@@ -1,5 +1,7 @@
 package com.example.demo.Classes;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -15,6 +17,7 @@ import java.util.Set;
 @NoArgsConstructor
 @Getter
 @Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -28,17 +31,40 @@ public class User {
     private Boolean isLawyer;
     private Boolean isJudge;
     @ManyToMany
-    @JsonManagedReference
+    @JoinTable(
+        name = "user_active_cases",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "case_id")
+    )
+    @JsonIgnore
     private Set<Case> active;
     @ManyToMany
-    @JsonManagedReference
+    @JoinTable(
+        name = "user_past_cases",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "case_id")
+    )
+    @JsonIgnore
     private Set<Case> pastCases;
     @ManyToMany
-    @JsonManagedReference
+    @JoinTable(
+        name = "user_case_requests",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "case_id")
+    )
+    @JsonIgnore
     private Set<Case> caseRequest;
-    @JsonManagedReference
     @ManyToMany
+    @JoinTable(
+        name = "user_chats",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "chat_id")
+    )
+    @JsonIgnore
     private Set<Chat> chats;
+    @OneToMany(mappedBy = "judge")
+    @JsonIgnore
+    private Set<Case> judgeCases;
     private String description;
     private String specialisation;
     private Integer fees;

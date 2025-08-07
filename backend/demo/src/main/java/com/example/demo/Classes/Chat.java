@@ -23,7 +23,6 @@ public class Chat {
     @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Message> message;
-    @JsonBackReference
-    @ManyToMany
+    @ManyToMany(mappedBy = "chats")
     private Set<User> users;
 }
