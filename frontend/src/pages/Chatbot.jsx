@@ -6,7 +6,7 @@ export default function Chatbot() {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const GEMINI_API_KEY = 'AIzaSyDNRd0fnMoh_IM_5xb_5q4NVd6eH_RP2sU';
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
   const fetchGeminiResponse = async (userInput) => {
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`;
