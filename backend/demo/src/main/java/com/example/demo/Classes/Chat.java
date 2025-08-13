@@ -1,6 +1,5 @@
 package com.example.demo.Classes;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -12,6 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
+@Table(name = "chat_room")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter

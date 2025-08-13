@@ -15,13 +15,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.example.demo.Config.constant.header;
-
 public class jwtValidator extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String jwt=request.getHeader(header);
+        String jwt=request.getHeader(JwtConstants.HEADER);
         if(jwt!=null){
             try{
               String email=JwtProvider.getEmailFromJwt(jwt);

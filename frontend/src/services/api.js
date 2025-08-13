@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
-const AI_API_URL = process.env.REACT_APP_AI_API_URL || 'https://ai-court-ai.onrender.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL ;
+const AI_API_URL = process.env.REACT_APP_AI_API_URL ;
 
 const api = axios.create({
   baseURL: API_BASE_URL,

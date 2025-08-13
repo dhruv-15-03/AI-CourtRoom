@@ -1,6 +1,5 @@
 package com.example.demo.Classes;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -12,6 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
+@Table(name = "court_case")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
