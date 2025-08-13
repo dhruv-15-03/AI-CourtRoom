@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  backend:
+    image: dhruv1503/verimed-backend:latest
+    ports:
+      - "8082:8082"
+    env_file:
+      - .env
+    restart: always
