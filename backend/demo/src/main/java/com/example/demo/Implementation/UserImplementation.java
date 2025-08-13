@@ -1,12 +1,9 @@
 package com.example.demo.Implementation;
 
 import com.example.demo.Classes.Case;
-import com.example.demo.Classes.Message;
 import com.example.demo.Classes.User;
 import com.example.demo.Config.JwtProvider;
 import com.example.demo.Method.UserMethods;
-import com.example.demo.Repository.ChatAll;
-import com.example.demo.Repository.MessageAll;
 import com.example.demo.Repository.UserAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,10 +15,6 @@ import java.util.List;
 public class UserImplementation implements UserMethods {
     @Autowired
     private UserAll userAll;
-    @Autowired
-    private ChatAll chatAll;
-    @Autowired
-    private MessageAll messageAll;
     @Override
     public List<User> getLawyers() {
         return userAll.getLawyers();
