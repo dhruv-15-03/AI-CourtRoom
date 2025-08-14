@@ -17,7 +17,6 @@ const aiApi = axios.create({
   },
 });
 
-// Add request interceptor to ensure proper content type
 api.interceptors.request.use(
   (config) => {
     config.headers['Content-Type'] = 'application/json';
@@ -34,6 +33,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('authToken');
       localStorage.removeItem('userRole');
@@ -47,10 +54,25 @@ api.interceptors.response.use(
 export const authService = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/signup', userData),
-  logout: () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userProfile');
+  logout: async () => {
+    try {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userProfile');
+      
+     
+      window.location.href = '/login';
+      
+      return { success: true, message: 'Logged out successfully' };
+    } catch (error) {
+      console.error('Logout error:', error);
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userProfile');
+      window.location.href = '/login';
+      
+      return { success: false, error: error.message };
+    }
   }
 };
 
@@ -66,24 +88,26 @@ export const userService = {
 
 // Lawyer Services
 export const lawyerService = {
+  getProfile: () => api.get('/api/user/profile'), // Use unified endpoint
   getDashboardStats: () => api.get('/api/lawyer/dashboard'),
   getCaseRequests: () => api.get('/api/lawyer/case-requests'),
   acceptCaseRequest: (requestId) => api.post(`/api/lawyer/case-requests/${requestId}/accept`),
   rejectCaseRequest: (requestId) => api.post(`/api/lawyer/case-requests/${requestId}/reject`),
   getMyCases: () => api.get('/api/lawyer/cases'),
-  updateProfile: (data) => api.put('/api/lawyer/profile', data),
+  updateProfile: (data) => api.put('/api/user/profile', data), // Use unified endpoint
   getChats: () => api.get('/api/lawyer/chats'),
 };
 
 // Judge Services
 export const judgeService = {
+  getProfile: () => api.get('/api/user/profile'), // Use unified endpoint
   getDashboardStats: () => api.get('/api/judge/dashboard'),
   getPendingCases: () => api.get('/api/judge/pending-cases'),
   getCaseDetails: (caseId) => api.get(`/api/judge/cases/${caseId}`),
   updateCaseStatus: (caseId, status) => api.put(`/api/judge/cases/${caseId}/status`, { status }),
   addJudgment: (caseId, judgment) => api.post(`/api/judge/cases/${caseId}/judgment`, { judgment }),
   getJudgments: () => api.get('/api/judge/judgments'),
-  updateProfile: (data) => api.put('/api/judge/profile', data),
+  updateProfile: (data) => api.put('/api/user/profile', data), // Use unified endpoint
 };
 
 // Chat Services

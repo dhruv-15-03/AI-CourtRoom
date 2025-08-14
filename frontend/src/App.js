@@ -95,6 +95,21 @@ function AppContent() {
 
   const userRole = user?.role || 'user';
 
+  // Landing redirect: if user visits root '/', send them to login when no token
+  // or to their role-specific home when token exists.
+  function LandingRedirect() {
+    const token = localStorage.getItem('authToken');
+    const role = localStorage.getItem('userRole');
+
+    if (!token) {
+      return <Navigate to="/login" replace />;
+    }
+
+    if (role === 'lawyer') return <Navigate to="/lawyer/dashboard" replace />;
+    if (role === 'judge') return <Navigate to="/judge/dashboard" replace />;
+    return <Navigate to="/home" replace />; // default for normal users
+  }
+
   // Show loading screen while checking auth
   if (loading) {
     return <FullScreenLoader message="Loading application..." />;
@@ -116,8 +131,8 @@ function AppContent() {
           <>
             {userRole === 'user' && <Sidebar mode={mode} setMode={setMode} />}
 
-            <div style={{ 
-              marginLeft: userRole === 'user' ? 240 : 0, 
+      <div style={{ 
+              marginLeft: userRole === 'user' ? 280 : 0, 
               padding: '1rem',
               minHeight: '100vh',
               backgroundColor: theme.palette.background.default 
@@ -126,14 +141,14 @@ function AppContent() {
                 {/* User Routes */}
                 {userRole === 'user' && (
                   <>
-                    <Route path="/" element={<FindLawyer />} />
+        <Route path="/home" element={<FindLawyer />} />
                     <Route path="/ai-assistant" element={<AIAssistant />} />
                     <Route path="/chatbot" element={<Chatbot />} />
                     <Route path="/cases" element={<Cases />} />
                     <Route path="/my-profile" element={<ProfilePage />} />
                     <Route path="/chats" element={<ChatPage />} />
                     <Route path="/ai-chat" element={<AIQuestionare />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/home" replace />} />
                   </>
                 )}
 
@@ -155,11 +170,11 @@ function AppContent() {
                   </Route>
                 )}
 
-                {/* Redirect based on role */}
+                {/* Redirect based on role for any unmatched route */}
                 <Route path="*" element={
                   <Navigate to={
                     userRole === 'lawyer' ? '/lawyer/dashboard' :
-                    userRole === 'judge' ? '/judge/dashboard' : '/'
+                    userRole === 'judge' ? '/judge/dashboard' : '/home'
                   } replace />
                 } />
               </Routes>
@@ -167,6 +182,7 @@ function AppContent() {
           </>
         ) : (
           <Routes>
+            <Route path="/" element={<LandingRedirect />} />
             <Route path="/login" element={<LoginPage showNotification={showNotification} />} />
             <Route path="/register" element={<RegisterPage showNotification={showNotification} />} />
             <Route path="*" element={<Navigate to="/login" replace />} />

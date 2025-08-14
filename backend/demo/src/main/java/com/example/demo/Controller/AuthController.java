@@ -45,11 +45,15 @@ public class AuthController {
         newUser.setIsJudge(user.getRole().equalsIgnoreCase("judge"));
         newUser.setFirstName(user.getFirstName());
         newUser.setLastName(user.getLastName());
+        newUser.setEmail(user.getEmail()); // Fix: Set email field
         newUser.setPassword(passwordEncoder.encode(user.getPassword()));
+        
+        // Save user first to get a valid user with email
+        userAll.save(newUser);
+        
+        // Create authentication with the email
         Authentication authentication=new UsernamePasswordAuthenticationToken(newUser.getEmail(),newUser.getPassword());
         String token = JwtProvider.generateToken(authentication);
-
-        userAll.save(newUser);
 
         return new AuthResponse(token,"Registered Successfully");
     }

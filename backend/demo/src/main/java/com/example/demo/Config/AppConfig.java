@@ -54,8 +54,7 @@ public class AppConfig implements WebMvcConfigurer {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:8081",
                 "http://localhost:3000",
-                "https://veri-med.vercel.app/",
-                "https://ai-court-room.vercel.app/"
+                "https://ai-court-room-iota.vercel.app/"
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
