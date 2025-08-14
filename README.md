@@ -260,6 +260,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - [x] Basic case management
 - [x] Real-time chat system
 - [x] AI chatbot integration
+- [x] Case Prediction from use queries
 
 ### Phase 2 🚧 (In Progress)
 - [ ] Advanced case workflows
