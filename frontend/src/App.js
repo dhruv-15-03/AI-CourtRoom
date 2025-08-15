@@ -23,13 +23,15 @@ import LawyerRoutes from './routes/LawyerRoutes';
 import JudgeLayout from './components/JudgeLayout';
 import JudgeDashboard from './pages/judge/JudgeDashboard.jsx';
 import PendingCases from './pages/judge/PendingCases.jsx';
-import CaseDetails from './pages/judge/CaseDetails.jsx';
+import JudgeCaseDetails from './pages/judge/CaseDetails.jsx';
 import Judgments from './pages/judge/Judgments.jsx';
 import JudgeProfile from './pages/judge/JudgeProfile.jsx';
 
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Cases from './pages/Cases.jsx';
+import CreateCase from './pages/CreateCase.jsx';
+import CaseDetails from './pages/CaseDetails.jsx';
 
 // Common Components
 import { FullScreenLoader } from './components/common/UIComponents';
@@ -145,6 +147,8 @@ function AppContent() {
                     <Route path="/ai-assistant" element={<AIAssistant />} />
                     <Route path="/chatbot" element={<Chatbot />} />
                     <Route path="/cases" element={<Cases />} />
+                    <Route path="/cases/create" element={<CreateCase />} />
+                    <Route path="/cases/:id" element={<CaseDetails />} />
                     <Route path="/my-profile" element={<ProfilePage />} />
                     <Route path="/chats" element={<ChatPage />} />
                     <Route path="/ai-chat" element={<AIQuestionare />} />
@@ -163,7 +167,7 @@ function AppContent() {
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<JudgeDashboard />} />
                     <Route path="pending-cases" element={<PendingCases />} />
-                    <Route path="case-details/:id" element={<CaseDetails />} />
+                    <Route path="case-details/:id" element={<JudgeCaseDetails />} />
                     <Route path="judgments" element={<Judgments />} />
                     <Route path="profile" element={<JudgeProfile />} />
                     <Route path="*" element={<Navigate to="dashboard" replace />} />

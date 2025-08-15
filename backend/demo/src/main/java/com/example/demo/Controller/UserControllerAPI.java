@@ -1,12 +1,16 @@
 package com.example.demo.Controller;
 
 import com.example.demo.Classes.User;
+import com.example.demo.Classes.Case;
 import com.example.demo.Repository.UserAll;
+import com.example.demo.Repository.CaseAll;
 import com.example.demo.Config.JwtProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -18,6 +22,9 @@ public class UserControllerAPI {
     
     @Autowired
     private UserAll userRepository;
+    
+    @Autowired
+    private CaseAll caseRepository;
 
     @GetMapping("/profile")
     public ResponseEntity<?> getUserProfile(@RequestHeader("Authorization") String jwt) {
@@ -29,7 +36,6 @@ public class UserControllerAPI {
                 return ResponseEntity.notFound().build();
             }
             
-            // Remove sensitive information
             user.setPassword(null);
             
             return ResponseEntity.ok(user);
@@ -88,7 +94,6 @@ public class UserControllerAPI {
                     .filter(user -> maxFees == null || user.getFees() <= maxFees)
                     .collect(Collectors.toList());
             
-            // Remove sensitive information
             lawyers.forEach(lawyer -> lawyer.setPassword(null));
             
             return ResponseEntity.ok(lawyers);
@@ -110,9 +115,7 @@ public class UserControllerAPI {
             if (user == null || lawyer == null || !lawyer.getIsLawyer()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Invalid user or lawyer"));
             }
-            
-            // Here you would create a case request
-            // For now, just return success
+
             return ResponseEntity.ok(Map.of("message", "Lawyer request sent successfully"));
             
         } catch (Exception e) {
@@ -130,14 +133,43 @@ public class UserControllerAPI {
                 return ResponseEntity.notFound().build();
             }
             
-            // Return user's cases (both active and past)
+            List<Map<String, Object>> activeCases = new ArrayList<>();
+            List<Map<String, Object>> pastCases = new ArrayList<>();
+
+            if (user.getActive() != null && !user.getActive().isEmpty()) {
+                for (Case c : user.getActive()) {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", c.getId());
+                    m.put("description", c.getDescription() != null ? c.getDescription() : "");
+                    m.put("date", c.getDate() != null ? c.getDate().toString() : "");
+                    m.put("next", c.getNext() != null ? c.getNext().toString() : "");
+                    m.put("isClose", c.getIsClose() != null ? c.getIsClose() : false);
+                    m.put("status", c.getIsClose() != null && c.getIsClose() ? "Closed" : "Active");
+                    activeCases.add(m);
+                }
+            }
+
+            if (user.getPastCases() != null && !user.getPastCases().isEmpty()) {
+                for (Case c : user.getPastCases()) {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", c.getId());
+                    m.put("description", c.getDescription() != null ? c.getDescription() : "");
+                    m.put("date", c.getDate() != null ? c.getDate().toString() : "");
+                    m.put("next", c.getNext() != null ? c.getNext().toString() : "");
+                    m.put("isClose", c.getIsClose() != null ? c.getIsClose() : false);
+                    m.put("status", c.getIsClose() != null && c.getIsClose() ? "Closed" : "Active");
+                    pastCases.add(m);
+                }
+            }
+
+            
             return ResponseEntity.ok(Map.of(
-                "activeCases", user.getActive() != null ? user.getActive() : List.of(),
-                "pastCases", user.getPastCases() != null ? user.getPastCases() : List.of()
+                "activeCases", activeCases,
+                "pastCases", pastCases
             ));
             
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -158,4 +190,6 @@ public class UserControllerAPI {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+    
+    
 }

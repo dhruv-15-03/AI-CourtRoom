@@ -86,6 +86,30 @@ export const userService = {
   getChats: () => api.get('/api/user/chats'),
 };
 
+// Case Services - Comprehensive case management
+export const caseService = {
+  // Basic CRUD
+  createCase: (caseData) => api.post('/api/cases', caseData),
+  getCaseById: (id) => api.get(`/api/cases/${id}`),
+  getAllCases: (params = {}) => api.get('/api/cases/all', { params }),
+  updateCase: (id, caseData) => api.put(`/api/cases/${id}`, caseData),
+  deleteCase: (id) => api.delete(`/api/cases/${id}`),
+  
+  searchCases: (query) => api.get('/api/cases/search', { params: { query } }),
+  getActiveCases: () => api.get('/api/cases/all', { params: { status: 'active' } }),
+  getClosedCases: () => api.get('/api/cases/all', { params: { status: 'closed' } }),
+  
+  assignLawyer: (caseId, lawyerId) => api.post(`/api/cases/${caseId}/assign-lawyer/${lawyerId}`),
+  assignJudge: (caseId, judgeId) => api.post(`/api/cases/${caseId}/assign-judge/${judgeId}`),
+  closeCase: (caseId, judgement) => api.post(`/api/cases/${caseId}/close`, { judgement }),
+  reopenCase: (caseId) => api.post(`/api/cases/${caseId}/reopen`),
+  addJudgement: (caseId, judgement) => api.post(`/api/cases/${caseId}/judgement`, { judgement }),
+  setNextHearing: (caseId, date) => api.post(`/api/cases/${caseId}/next-hearing`, { date }),
+  
+  getStatistics: () => api.get('/api/cases/statistics'),
+  getUpcomingHearings: () => api.get('/api/cases/upcoming-hearings'),
+};
+
 // Lawyer Services
 export const lawyerService = {
   getProfile: () => api.get('/api/user/profile'), // Use unified endpoint
@@ -115,20 +139,6 @@ export const chatService = {
   getMessages: (chatId) => api.get(`/api/chat/${chatId}/messages`),
   sendMessage: (chatId, message) => api.post(`/api/chat/${chatId}/messages`, { content: message }),
   createChat: (participants) => api.post('/api/chat/create', { participants }),
-};
-
-// Case Services
-export const caseService = {
-  createCase: (caseData) => api.post('/api/cases', caseData),
-  getCaseById: (caseId) => api.get(`/api/cases/${caseId}`),
-  updateCase: (caseId, updates) => api.put(`/api/cases/${caseId}`, updates),
-  uploadDocument: (caseId, file) => {
-    const formData = new FormData();
-    formData.append('document', file);
-    return api.post(`/api/cases/${caseId}/documents`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-  },
 };
 
 // AI Services
