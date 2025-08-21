@@ -41,6 +41,35 @@ function AppContent() {
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
   const { isAuthenticated, user, loading } = useAuth(); 
 
+  // One-time JWT cleanup as requested (clears any stale tokens once per browser)
+  React.useEffect(() => {
+    const alreadyCleared = localStorage.getItem('jwtClearedOnce') === '1';
+    if (!alreadyCleared) {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userProfile');
+      localStorage.setItem('jwtClearedOnce', '1');
+    }
+  }, []);
+
+  // Helper: basic JWT expiry check (treat malformed as expired)
+  const isTokenExpired = (token) => {
+    try {
+      const payloadBase64 = token.split('.')[1];
+      if (!payloadBase64) return true;
+      const json = JSON.parse(atob(payloadBase64));
+      if (!json || !json.exp) return false; // if no exp, assume not expired
+      return Date.now() >= json.exp * 1000;
+    } catch (e) {
+      return true;
+    }
+  };
+
+  // Current token validity
+  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+  const tokenIsValid = token ? !isTokenExpired(token) : false;
+  const authed = isAuthenticated && tokenIsValid;
+
   // Save theme preference
   React.useEffect(() => {
     localStorage.setItem('theme', mode);
@@ -101,14 +130,17 @@ function AppContent() {
   // or to their role-specific home when token exists.
   function LandingRedirect() {
     const token = localStorage.getItem('authToken');
-    const role = localStorage.getItem('userRole');
-
-    if (!token) {
+    // Redirect to login when missing or expired/invalid token
+    if (!token || isTokenExpired(token)) {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userProfile');
       return <Navigate to="/login" replace />;
     }
 
-    if (role === 'lawyer') return <Navigate to="/lawyer/dashboard" replace />;
-    if (role === 'judge') return <Navigate to="/judge/dashboard" replace />;
+    // Use the mapped userRole instead of raw localStorage value
+    if (userRole === 'lawyer') return <Navigate to="/lawyer/dashboard" replace />;
+    if (userRole === 'judge') return <Navigate to="/judge/dashboard" replace />;
     return <Navigate to="/home" replace />; // default for normal users
   }
 
@@ -129,7 +161,7 @@ function AppContent() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        {isAuthenticated ? (
+  {authed ? (
           <>
             {userRole === 'user' && <Sidebar mode={mode} setMode={setMode} />}
 

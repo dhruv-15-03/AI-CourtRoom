@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { userService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -57,6 +58,7 @@ function TabPanel(props) {
 
 const Cases = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, logout } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [activeCases, setActiveCases] = useState([]);
   const [pastCases, setPastCases] = useState([]);
@@ -67,8 +69,24 @@ const Cases = () => {
   const [selectedCase, setSelectedCase] = useState(null);
 
   useEffect(() => {
+    // Check authentication status
+    if (!isAuthenticated) {
+      console.warn('User not authenticated, redirecting to login...');
+      navigate('/login');
+      return;
+    }
+
+    // Validate JWT token exists
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      console.warn('No JWT token found, redirecting to login...');
+      logout();
+      navigate('/login');
+      return;
+    }
+
     loadCases();
-  }, []);
+  }, [isAuthenticated, navigate, logout]);
 
   const loadCases = async () => {
     try {
@@ -81,6 +99,24 @@ const Cases = () => {
       setPastCases(response.data.pastCases || []);
     } catch (err) {
       console.error('Error loading cases:', err);
+      
+      // Check for JWT/Authentication errors
+      if (err.response?.status === 401 || 
+          err.response?.status === 403 ||
+          (err.response?.data?.message && 
+           (err.response.data.message.includes('JWT') || 
+            err.response.data.message.includes('token') ||
+            err.response.data.message.includes('Unauthorized') ||
+            err.response.data.message.includes('expired')))) {
+        
+        setError('Your session has expired. Please log in again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+        return;
+      }
+      
       setError(err.response?.data?.error || err.message || 'Failed to load cases');
     } finally {
       setLoading(false);

@@ -5,7 +5,6 @@ import {
   Typography,
   InputAdornment,
   IconButton,
-  MenuItem,
   Box,
   Alert,
   CircularProgress,
@@ -18,8 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 const LoginPage = ({ showNotification }) => {
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    role: 'user'
+    password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
@@ -40,10 +38,6 @@ const LoginPage = ({ showNotification }) => {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    if (!formData.role) {
-      newErrors.role = 'Role is required';
     }
     
     setErrors(newErrors);
@@ -72,17 +66,19 @@ const LoginPage = ({ showNotification }) => {
     if (!validateForm()) return;
 
     try {
-      const result = await login(formData);
+      // Only send email and password for login
+      const loginCredentials = {
+        email: formData.email,
+        password: formData.password
+      };
+      
+      const result = await login(loginCredentials);
       
       if (result.success) {
         showNotification && showNotification('Login successful!', 'success');
         
-        // Navigate based on role
-        const redirectPath = 
-          formData.role === 'lawyer' ? '/lawyer/dashboard' :
-          formData.role === 'judge' ? '/judge/dashboard' : '/';
-        
-        navigate(redirectPath);
+        // Navigation will be handled by the App.js LandingRedirect based on actual user role
+        navigate('/');
       } else {
         showNotification && showNotification(result.error, 'error');
       }
@@ -147,24 +143,6 @@ const LoginPage = ({ showNotification }) => {
             ),
           }}
         />
-
-        <TextField
-          select
-          label="Login as"
-          name="role"
-          value={formData.role}
-          onChange={handleChange}
-          fullWidth
-          margin="normal"
-          required
-          error={!!errors.role}
-          helperText={errors.role}
-          disabled={loading}
-        >
-          <MenuItem value="user">User</MenuItem>
-          <MenuItem value="lawyer">Lawyer</MenuItem>
-          <MenuItem value="judge">Judge</MenuItem>
-        </TextField>
 
         <Button 
           type="submit"

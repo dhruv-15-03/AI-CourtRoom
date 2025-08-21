@@ -1,6 +1,7 @@
 package com.example.demo.Controller;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -13,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.example.demo.Classes.Case;
 import com.example.demo.Classes.User;
-import com.example.demo.Implementation.CaseImplementation;
+import com.example.demo.Method.CaseService;
 import com.example.demo.Repository.UserAll;
 import com.example.demo.Config.JwtProvider;
 
@@ -23,7 +24,7 @@ import com.example.demo.Config.JwtProvider;
 public class CaseController {
     
     @Autowired
-    private CaseImplementation caseService;
+    private CaseService caseService;
     
     @Autowired
     private UserAll userRepository;
@@ -46,18 +47,154 @@ public class CaseController {
             newCase.setDescription((String) caseData.get("description"));
             
             // Parse dates if provided
-            if (caseData.get("date") != null) {
-                newCase.setDate(LocalDate.parse((String) caseData.get("date")));
+            if (caseData.get("filingDate") != null) {
+                newCase.setFilingDate(LocalDate.parse((String) caseData.get("filingDate")));
             }
-            if (caseData.get("next") != null) {
-                newCase.setNext(LocalDate.parse((String) caseData.get("next")));
+            if (caseData.get("nextHearing") != null) {
+                newCase.setNextHearing(LocalDateTime.parse((String) caseData.get("nextHearing")));
             }
             
-            Case createdCase = caseService.newCase(currentUser, newCase);
+            Case createdCase = caseService.newCase(newCase);
             
             return ResponseEntity.ok(Map.of(
                 "message", "Case created successfully",
                 "caseId", createdCase.getId()
+            ));
+            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    @PostMapping("/create-indian-case")
+    public ResponseEntity<?> createIndianCase(
+            @RequestHeader("Authorization") String jwt,
+            @RequestBody Map<String, Object> caseData) {
+        try {
+            String email = JwtProvider.getEmailFromJwt(jwt);
+            User currentUser = userRepository.searchByEmail(email);
+            
+            if (currentUser == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+            }
+            
+            Case newCase = new Case();
+            
+            // Set case type and court type first (required for other defaults)
+            String caseTypeStr = (String) caseData.get("caseType");
+            String courtTypeStr = (String) caseData.get("courtType");
+            
+            if (caseTypeStr != null) {
+                newCase.setCaseType(Case.CaseType.valueOf(caseTypeStr.toUpperCase()));
+            }
+            if (courtTypeStr != null) {
+                newCase.setCourtType(Case.CourtType.valueOf(courtTypeStr.toUpperCase()));
+            }
+            
+            // Set basic information
+            newCase.setTitle((String) caseData.get("title"));
+            newCase.setDescription((String) caseData.get("description"));
+            newCase.setPlaintiffPetitioner((String) caseData.get("plaintiff"));
+            newCase.setDefendantRespondent((String) caseData.get("defendant"));
+            
+            // Parse dates if provided
+            if (caseData.get("nextHearing") != null) {
+                newCase.setNextHearing(LocalDateTime.parse((String) caseData.get("nextHearing")));
+            }
+            
+            // Set court fees if provided
+            if (caseData.get("courtFees") != null) {
+                newCase.setCourtFees(Double.valueOf(caseData.get("courtFees").toString()));
+            }
+            
+            // Add the petitioner to the case
+            if (newCase.getPetitioners() != null) {
+                newCase.getPetitioners().add(currentUser);
+            }
+            
+            Case createdCase = caseService.newCase(newCase);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Indian legal case created successfully",
+                "caseId", createdCase.getId(),
+                "caseNumber", createdCase.getCaseNumber(),
+                "courtLocation", createdCase.getCourtLocation(),
+                "actsAndSections", createdCase.getActsAndSections()
+            ));
+            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/indian-templates")
+    public ResponseEntity<?> getIndianCaseTemplates() {
+        try {
+            Map<String, Object> templates = new HashMap<>();
+            
+            // Criminal case template
+            templates.put("criminal", Map.of(
+                "title", "State of Delhi vs. [Accused Name]",
+                "description", "Case filed under IPC for alleged criminal activities",
+                "plaintiff", "State of Delhi",
+                "defendant", "[Name of Accused]",
+                "caseType", "CRIMINAL",
+                "courtType", "SESSIONS_COURT",
+                "suggestedActs", List.of("IPC Section 302", "IPC Section 307", "CrPC Section 154"),
+                "courtFees", 500.0
+            ));
+            
+            // Civil case template
+            templates.put("civil", Map.of(
+                "title", "[Plaintiff Name] vs. [Defendant Name]",
+                "description", "Civil suit for recovery of money/property dispute",
+                "plaintiff", "[Name of Plaintiff]",
+                "defendant", "[Name of Defendant]",
+                "caseType", "CIVIL",
+                "courtType", "DISTRICT_COURT",
+                "suggestedActs", List.of("CPC Order VII Rule 1", "Contract Act 1872", "Sale of Goods Act 1930"),
+                "courtFees", 1000.0
+            ));
+            
+            // Family case template
+            templates.put("family", Map.of(
+                "title", "[Petitioner] vs. [Respondent] (Matrimonial)",
+                "description", "Petition filed under Hindu Marriage Act for matrimonial relief",
+                "plaintiff", "[Name of Petitioner]",
+                "defendant", "[Name of Respondent]",
+                "caseType", "FAMILY",
+                "courtType", "FAMILY_COURT",
+                "suggestedActs", List.of("Hindu Marriage Act 1955", "Domestic Violence Act 2005", "Maintenance and Welfare of Parents Act 2007"),
+                "courtFees", 750.0
+            ));
+            
+            // Consumer case template
+            templates.put("consumer", Map.of(
+                "title", "[Consumer Name] vs. [Service Provider/Manufacturer]",
+                "description", "Consumer complaint for deficiency in service or defective goods",
+                "plaintiff", "[Name of Consumer]",
+                "defendant", "[Name of Service Provider]",
+                "caseType", "CONSUMER",
+                "courtType", "CONSUMER_COURT",
+                "suggestedActs", List.of("Consumer Protection Act 2019", "Sale of Goods Act 1930"),
+                "courtFees", 200.0
+            ));
+            
+            // Labour case template
+            templates.put("labour", Map.of(
+                "title", "[Employee/Union] vs. [Employer/Company]",
+                "description", "Industrial dispute regarding wages, working conditions or termination",
+                "plaintiff", "[Name of Employee/Union]",
+                "defendant", "[Name of Employer/Company]",
+                "caseType", "LABOUR",
+                "courtType", "LABOUR_COURT",
+                "suggestedActs", List.of("Industrial Disputes Act 1947", "Payment of Wages Act 1936", "Contract Labour Act 1970"),
+                "courtFees", 300.0
+            ));
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Indian legal case templates",
+                "templates", templates
             ));
             
         } catch (Exception e) {
@@ -71,17 +208,21 @@ public class CaseController {
             Optional<Case> caseOpt = caseService.getCaseById(id);
             if (caseOpt.isPresent()) {
                 Case c = caseOpt.get();
-                return ResponseEntity.ok(Map.of(
-                    "id", c.getId(),
-                    "description", c.getDescription() != null ? c.getDescription() : "",
-                    "date", c.getDate() != null ? c.getDate().toString() : "",
-                    "next", c.getNext() != null ? c.getNext().toString() : "",
-                    "isClose", c.getIsClose() != null ? c.getIsClose() : false,
-                    "status", c.getIsClose() != null && c.getIsClose() ? "Closed" : "Active",
-                    "judgement", c.getJudgement() != null ? c.getJudgement() : List.of(),
-                    "judgeId", c.getJudge() != null ? c.getJudge().getId() : null,
-                    "judgeName", c.getJudge() != null ? c.getJudge().getFirstName() + " " + c.getJudge().getLastName() : null
-                ));
+                Map<String, Object> result = new HashMap<>();
+                result.put("id", c.getId());
+                result.put("caseNumber", c.getCaseNumber() != null ? c.getCaseNumber() : "");
+                result.put("title", c.getTitle() != null ? c.getTitle() : "");
+                result.put("description", c.getDescription() != null ? c.getDescription() : "");
+                result.put("filingDate", c.getFilingDate() != null ? c.getFilingDate().toString() : "");
+                result.put("nextHearing", c.getNextHearing() != null ? c.getNextHearing().toString() : "");
+                result.put("isDisposed", c.getIsDisposed() != null ? c.getIsDisposed() : false);
+                result.put("status", c.getStatus() != null ? c.getStatus().getDisplayName() : "Filed");
+                result.put("caseType", c.getCaseType() != null ? c.getCaseType().getDisplayName() : "");
+                result.put("courtType", c.getCourtType() != null ? c.getCourtType().getDisplayName() : "");
+                result.put("finalJudgments", c.getFinalJudgments() != null ? c.getFinalJudgments() : List.of());
+                result.put("judgeId", c.getPresidingJudge() != null ? c.getPresidingJudge().getId() : null);
+                result.put("judgeName", c.getPresidingJudge() != null ? c.getPresidingJudge().getFirstName() + " " + c.getPresidingJudge().getLastName() : null);
+                return ResponseEntity.ok(result);
             }
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
@@ -110,11 +251,15 @@ public class CaseController {
                 .map(c -> {
                     Map<String, Object> m = new HashMap<>();
                     m.put("id", c.getId());
+                    m.put("caseNumber", c.getCaseNumber() != null ? c.getCaseNumber() : "");
+                    m.put("title", c.getTitle() != null ? c.getTitle() : "");
                     m.put("description", c.getDescription() != null ? c.getDescription() : "");
-                    m.put("date", c.getDate() != null ? c.getDate().toString() : "");
-                    m.put("next", c.getNext() != null ? c.getNext().toString() : "");
-                    m.put("isClose", c.getIsClose() != null ? c.getIsClose() : false);
-                    m.put("status", c.getIsClose() != null && c.getIsClose() ? "Closed" : "Active");
+                    m.put("filingDate", c.getFilingDate() != null ? c.getFilingDate().toString() : "");
+                    m.put("nextHearing", c.getNextHearing() != null ? c.getNextHearing().toString() : "");
+                    m.put("isDisposed", c.getIsDisposed() != null ? c.getIsDisposed() : false);
+                    m.put("status", c.getStatus() != null ? c.getStatus().getDisplayName() : "Filed");
+                    m.put("caseType", c.getCaseType() != null ? c.getCaseType().getDisplayName() : "");
+                    m.put("courtType", c.getCourtType() != null ? c.getCourtType().getDisplayName() : "");
                     return m;
                 }).collect(Collectors.toList());
             
@@ -132,12 +277,14 @@ public class CaseController {
         try {
             Case updateCase = new Case();
             updateCase.setDescription((String) caseData.get("description"));
+            updateCase.setTitle((String) caseData.get("title"));
+            updateCase.setCaseNumber((String) caseData.get("caseNumber"));
             
-            if (caseData.get("next") != null) {
-                updateCase.setNext(LocalDate.parse((String) caseData.get("next")));
+            if (caseData.get("nextHearing") != null) {
+                updateCase.setNextHearing(LocalDateTime.parse((String) caseData.get("nextHearing")));
             }
-            if (caseData.get("isClose") != null) {
-                updateCase.setIsClose((Boolean) caseData.get("isClose"));
+            if (caseData.get("isDisposed") != null) {
+                updateCase.setIsDisposed((Boolean) caseData.get("isDisposed"));
             }
             
             caseService.updateCase(id, updateCase);
@@ -169,7 +316,7 @@ public class CaseController {
             @PathVariable Integer id,
             @PathVariable Integer lawyerId) {
         try {
-            caseService.assignLawyerToCase(id, lawyerId);
+            caseService.assignLawyer(id, lawyerId);
             return ResponseEntity.ok(Map.of("message", "Lawyer assigned successfully"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -181,7 +328,7 @@ public class CaseController {
             @PathVariable Integer id,
             @PathVariable Integer judgeId) {
         try {
-            caseService.assignJudgeToCase(id, judgeId);
+            caseService.assignJudge(id, judgeId);
             return ResponseEntity.ok(Map.of("message", "Judge assigned successfully"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -203,9 +350,8 @@ public class CaseController {
             
             Optional<Case> caseOpt = caseService.getCaseById(id);
             if (caseOpt.isPresent()) {
-                String judgement = data != null ? (String) data.get("judgement") : null;
-                String result = caseService.close(caseOpt.get(), judge, judgement);
-                return ResponseEntity.ok(Map.of("message", result));
+                caseService.closeCase(id);
+                return ResponseEntity.ok(Map.of("message", "Case closed successfully"));
             } else {
                 return ResponseEntity.notFound().build();
             }
@@ -242,8 +388,20 @@ public class CaseController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Judgement cannot be empty"));
             }
             
-            caseService.addJudgement(id, judgement);
-            return ResponseEntity.ok(Map.of("message", "Judgement added successfully"));
+            // For now, we'll add judgement by updating the case
+            Optional<Case> caseOpt = caseService.getCaseById(id);
+            if (caseOpt.isPresent()) {
+                Case caseEntity = caseOpt.get();
+                if (caseEntity.getFinalJudgments() != null) {
+                    caseEntity.getFinalJudgments().add(judgement);
+                } else {
+                    caseEntity.setFinalJudgments(List.of(judgement));
+                }
+                caseService.updateCase(id, caseEntity);
+                return ResponseEntity.ok(Map.of("message", "Judgement added successfully"));
+            } else {
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -257,8 +415,16 @@ public class CaseController {
             String dateStr = (String) data.get("date");
             LocalDate nextDate = LocalDate.parse(dateStr);
             
-            caseService.setNextHearingDate(id, nextDate);
-            return ResponseEntity.ok(Map.of("message", "Next hearing date set successfully"));
+            // Set next hearing by updating the case
+            Optional<Case> caseOpt = caseService.getCaseById(id);
+            if (caseOpt.isPresent()) {
+                Case caseEntity = caseOpt.get();
+                caseEntity.setNextHearing(nextDate.atStartOfDay()); // Convert LocalDate to LocalDateTime
+                caseService.updateCase(id, caseEntity);
+                return ResponseEntity.ok(Map.of("message", "Next hearing date set successfully"));
+            } else {
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -274,9 +440,12 @@ public class CaseController {
                 .map(c -> {
                     Map<String, Object> m = new HashMap<>();
                     m.put("id", c.getId());
+                    m.put("caseNumber", c.getCaseNumber() != null ? c.getCaseNumber() : "");
+                    m.put("title", c.getTitle() != null ? c.getTitle() : "");
                     m.put("description", c.getDescription() != null ? c.getDescription() : "");
-                    m.put("date", c.getDate() != null ? c.getDate().toString() : "");
-                    m.put("status", c.getIsClose() != null && c.getIsClose() ? "Closed" : "Active");
+                    m.put("filingDate", c.getFilingDate() != null ? c.getFilingDate().toString() : "");
+                    m.put("status", c.getStatus() != null ? c.getStatus().getDisplayName() : "Filed");
+                    m.put("caseType", c.getCaseType() != null ? c.getCaseType().getDisplayName() : "");
                     return m;
                 }).collect(Collectors.toList());
             
@@ -291,8 +460,8 @@ public class CaseController {
         try {
             return ResponseEntity.ok(Map.of(
                 "totalCases", caseService.getAllCases().size(),
-                "activeCases", caseService.countActiveCases(),
-                "closedCases", caseService.countClosedCases()
+                "activeCases", caseService.getActiveCasesCount(),
+                "closedCases", caseService.getClosedCasesCount()
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -307,8 +476,10 @@ public class CaseController {
                 .map(c -> {
                     Map<String, Object> m = new HashMap<>();
                     m.put("id", c.getId());
+                    m.put("caseNumber", c.getCaseNumber() != null ? c.getCaseNumber() : "");
+                    m.put("title", c.getTitle() != null ? c.getTitle() : "");
                     m.put("description", c.getDescription() != null ? c.getDescription() : "");
-                    m.put("next", c.getNext() != null ? c.getNext().toString() : "");
+                    m.put("nextHearing", c.getNextHearing() != null ? c.getNextHearing().toString() : "");
                     return m;
                 }).collect(Collectors.toList());
             

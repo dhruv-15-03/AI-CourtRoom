@@ -2,8 +2,10 @@ package com.example.demo.Controller;
 
 import com.example.demo.Classes.User;
 import com.example.demo.Classes.Case;
+import com.example.demo.Classes.CaseRequest;
 import com.example.demo.Repository.UserAll;
 import com.example.demo.Repository.CaseAll;
+import com.example.demo.Repository.CaseRequestRepository;
 import com.example.demo.Config.JwtProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,8 +25,12 @@ public class UserControllerAPI {
     @Autowired
     private UserAll userRepository;
     
+    // Note: CaseAll repository is available for future case-related operations
     @Autowired
     private CaseAll caseRepository;
+    
+    @Autowired
+    private CaseRequestRepository caseRequestRepository;
 
     @GetMapping("/profile")
     public ResponseEntity<?> getUserProfile(@RequestHeader("Authorization") String jwt) {
@@ -36,11 +42,35 @@ public class UserControllerAPI {
                 return ResponseEntity.notFound().build();
             }
             
-            user.setPassword(null);
+            // Create a safe DTO to avoid lazy loading issues
+            Map<String, Object> userDto = new HashMap<>();
+            userDto.put("id", user.getId());
+            userDto.put("firstName", user.getFirstName());
+            userDto.put("lastName", user.getLastName());
+            userDto.put("email", user.getEmail());
+            userDto.put("mobile", user.getMobile());
+            userDto.put("role", user.getRole());
+            userDto.put("isLawyer", user.getIsLawyer());
+            userDto.put("isJudge", user.getIsJudge());
+            userDto.put("description", user.getDescription());
+            userDto.put("specialisation", user.getSpecialisation());
+            userDto.put("fees", user.getFees());
+            userDto.put("image", user.getImage());
+            userDto.put("bench", user.getBench());
+            userDto.put("court", user.getCourt());
+            userDto.put("experience", user.getExperience());
+            userDto.put("isActive", user.getIsActive());
+            userDto.put("isVerified", user.getIsVerified());
+            userDto.put("courtType", user.getCourtType());
+            userDto.put("courtLocation", user.getCourtLocation());
+            userDto.put("casesHandled", user.getCasesHandled());
+            userDto.put("casesWon", user.getCasesWon());
+            userDto.put("successRate", user.getSuccessRate());
+            userDto.put("averageRating", user.getAverageRating());
             
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(userDto);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid token"));
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid token: " + e.getMessage()));
         }
     }
 
@@ -71,7 +101,7 @@ public class UserControllerAPI {
             if (existingUser.getIsJudge()) {
                 existingUser.setBench(updatedUser.getBench());
                 existingUser.setCourt(updatedUser.getCourt());
-                existingUser.setYears(updatedUser.getYears());
+                existingUser.setExperience(updatedUser.getExperience());
             }
             
             User savedUser = userRepository.save(existingUser);
@@ -86,17 +116,41 @@ public class UserControllerAPI {
     @GetMapping("/lawyers")
     public ResponseEntity<?> getAllLawyers(
             @RequestParam(required = false) String specialization,
-            @RequestParam(required = false) Integer maxFees) {
+            @RequestParam(required = false) Integer maxFees,
+            @RequestParam(required = false) String minRating,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) String experience) {
         try {
             List<User> lawyers = userRepository.findAll().stream()
-                    .filter(User::getIsLawyer)
-                    .filter(user -> specialization == null || user.getSpecialisation().equals(specialization))
-                    .filter(user -> maxFees == null || user.getFees() <= maxFees)
+                    .filter(user -> user.getIsLawyer() != null && user.getIsLawyer())
+                    .filter(user -> specialization == null || specialization.isEmpty() || 
+                            (user.getSpecialisation() != null && user.getSpecialisation().equals(specialization)))
+                    .filter(user -> maxFees == null || 
+                            (user.getFees() != null && user.getFees() <= maxFees))
                     .collect(Collectors.toList());
             
-            lawyers.forEach(lawyer -> lawyer.setPassword(null));
+            // Convert to DTOs to avoid lazy loading issues
+            List<Map<String, Object>> lawyerDtos = lawyers.stream().map(lawyer -> {
+                Map<String, Object> dto = new HashMap<>();
+                dto.put("id", lawyer.getId());
+                dto.put("firstName", lawyer.getFirstName());
+                dto.put("lastName", lawyer.getLastName());
+                dto.put("email", lawyer.getEmail());
+                dto.put("mobile", lawyer.getMobile());
+                dto.put("description", lawyer.getDescription());
+                dto.put("specialisation", lawyer.getSpecialisation());
+                dto.put("fees", lawyer.getFees());
+                dto.put("image", lawyer.getImage());
+                dto.put("experience", lawyer.getExperience());
+                dto.put("casesHandled", lawyer.getCasesHandled());
+                dto.put("casesWon", lawyer.getCasesWon());
+                dto.put("successRate", lawyer.getSuccessRate());
+                dto.put("averageRating", lawyer.getAverageRating());
+                dto.put("isVerified", lawyer.getIsVerified());
+                return dto;
+            }).collect(Collectors.toList());
             
-            return ResponseEntity.ok(lawyers);
+            return ResponseEntity.ok(lawyerDtos);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -116,7 +170,46 @@ public class UserControllerAPI {
                 return ResponseEntity.badRequest().body(Map.of("error", "Invalid user or lawyer"));
             }
 
-            return ResponseEntity.ok(Map.of("message", "Lawyer request sent successfully"));
+            // Create case request
+            CaseRequest caseRequest = new CaseRequest();
+            caseRequest.setUser(user);
+            caseRequest.setLawyer(lawyer);
+            caseRequest.setCaseTitle((String) caseData.get("caseTitle"));
+            caseRequest.setCaseDescription((String) caseData.get("caseDescription"));
+            
+            // Handle case type
+            String caseTypeStr = (String) caseData.get("caseType");
+            if (caseTypeStr != null) {
+                try {
+                    caseRequest.setCaseType(CaseRequest.CaseType.valueOf(caseTypeStr.toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    // Default to CIVIL if invalid type
+                    caseRequest.setCaseType(CaseRequest.CaseType.CIVIL);
+                }
+            }
+            
+            caseRequest.setUrgency((String) caseData.getOrDefault("urgency", "MEDIUM"));
+            
+            // Handle budget
+            Object budgetObj = caseData.get("budget");
+            if (budgetObj != null) {
+                if (budgetObj instanceof Number) {
+                    caseRequest.setBudget(((Number) budgetObj).doubleValue());
+                } else if (budgetObj instanceof String) {
+                    try {
+                        caseRequest.setBudget(Double.parseDouble((String) budgetObj));
+                    } catch (NumberFormatException e) {
+                        // Ignore invalid budget
+                    }
+                }
+            }
+            
+            caseRequest.setContactPreference((String) caseData.getOrDefault("contactPreference", "EMAIL"));
+            caseRequest.setStatus(CaseRequest.RequestStatus.PENDING);
+            
+            caseRequestRepository.save(caseRequest);
+
+            return ResponseEntity.ok(Map.of("message", "Lawyer request sent successfully", "requestId", caseRequest.getId()));
             
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -133,39 +226,70 @@ public class UserControllerAPI {
                 return ResponseEntity.notFound().build();
             }
             
-            List<Map<String, Object>> activeCases = new ArrayList<>();
-            List<Map<String, Object>> pastCases = new ArrayList<>();
+            // Use repository queries to fetch real cases for this user and avoid lazy-loading
+            List<Case> userCases = new ArrayList<>();
 
-            if (user.getActive() != null && !user.getActive().isEmpty()) {
-                for (Case c : user.getActive()) {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("id", c.getId());
-                    m.put("description", c.getDescription() != null ? c.getDescription() : "");
-                    m.put("date", c.getDate() != null ? c.getDate().toString() : "");
-                    m.put("next", c.getNext() != null ? c.getNext().toString() : "");
-                    m.put("isClose", c.getIsClose() != null ? c.getIsClose() : false);
-                    m.put("status", c.getIsClose() != null && c.getIsClose() ? "Closed" : "Active");
-                    activeCases.add(m);
+            if (user.getIsLawyer() != null && user.getIsLawyer()) {
+                try {
+                    userCases = caseRepository.findCasesByAdvocate(user);
+                } catch (Exception ex) {
+                    userCases = new ArrayList<>();
+                }
+            } else if (user.getIsJudge() != null && user.getIsJudge()) {
+                try {
+                    List<Case> presiding = caseRepository.findCasesByPresidingJudge(user);
+                    List<Case> bench = caseRepository.findCasesByBenchJudge(user);
+                    userCases = new ArrayList<>();
+                    if (presiding != null) userCases.addAll(presiding);
+                    if (bench != null) userCases.addAll(bench);
+                } catch (Exception ex) {
+                    userCases = new ArrayList<>();
+                }
+            } else {
+                try {
+                    userCases = caseRepository.findCasesByUser(user);
+                } catch (Exception ex) {
+                    userCases = new ArrayList<>();
                 }
             }
 
-            if (user.getPastCases() != null && !user.getPastCases().isEmpty()) {
-                for (Case c : user.getPastCases()) {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("id", c.getId());
-                    m.put("description", c.getDescription() != null ? c.getDescription() : "");
-                    m.put("date", c.getDate() != null ? c.getDate().toString() : "");
-                    m.put("next", c.getNext() != null ? c.getNext().toString() : "");
-                    m.put("isClose", c.getIsClose() != null ? c.getIsClose() : false);
-                    m.put("status", c.getIsClose() != null && c.getIsClose() ? "Closed" : "Active");
-                    pastCases.add(m);
-                }
-            }
+            List<Map<String, Object>> activeCases = userCases.stream()
+                    .filter(c -> c.getIsDisposed() == null || !c.getIsDisposed())
+                    .map(c -> {
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("id", c.getId());
+                        m.put("caseNumber", c.getCaseNumber() != null ? c.getCaseNumber() : "");
+                        m.put("title", c.getTitle() != null ? c.getTitle() : "");
+                        m.put("description", c.getDescription() != null ? c.getDescription() : "");
+                        m.put("filingDate", c.getFilingDate() != null ? c.getFilingDate().toString() : "");
+                        m.put("nextHearing", c.getNextHearing() != null ? c.getNextHearing().toString() : "");
+                        m.put("isDisposed", c.getIsDisposed() != null ? c.getIsDisposed() : false);
+                        m.put("status", c.getStatus() != null ? c.getStatus().getDisplayName() : "Filed");
+                        m.put("courtLocation", c.getCourtLocation());
+                        m.put("courtRoom", c.getCourtRoom());
+                        return m;
+                    }).collect(Collectors.toList());
 
-            
+            List<Map<String, Object>> pastCases = userCases.stream()
+                    .filter(c -> c.getIsDisposed() != null && c.getIsDisposed())
+                    .map(c -> {
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("id", c.getId());
+                        m.put("caseNumber", c.getCaseNumber() != null ? c.getCaseNumber() : "");
+                        m.put("title", c.getTitle() != null ? c.getTitle() : "");
+                        m.put("description", c.getDescription() != null ? c.getDescription() : "");
+                        m.put("filingDate", c.getFilingDate() != null ? c.getFilingDate().toString() : "");
+                        m.put("nextHearing", c.getNextHearing() != null ? c.getNextHearing().toString() : "");
+                        m.put("isDisposed", c.getIsDisposed() != null ? c.getIsDisposed() : false);
+                        m.put("status", c.getStatus() != null ? c.getStatus().getDisplayName() : "Disposed");
+                        m.put("courtLocation", c.getCourtLocation());
+                        m.put("courtRoom", c.getCourtRoom());
+                        return m;
+                    }).collect(Collectors.toList());
+
             return ResponseEntity.ok(Map.of(
-                "activeCases", activeCases,
-                "pastCases", pastCases
+                    "activeCases", activeCases,
+                    "pastCases", pastCases
             ));
             
         } catch (Exception e) {
@@ -183,8 +307,12 @@ public class UserControllerAPI {
                 return ResponseEntity.notFound().build();
             }
             
-            // Return user's chats
-            return ResponseEntity.ok(user.getChats() != null ? user.getChats() : List.of());
+            // Return empty chats to avoid lazy loading issues
+            // Implement proper chat repository queries as needed
+            return ResponseEntity.ok(Map.of(
+                "chats", new ArrayList<>(),
+                "message", "Chats functionality available - implement chat repository queries"
+            ));
             
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

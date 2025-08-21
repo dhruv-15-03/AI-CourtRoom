@@ -24,6 +24,7 @@ public class AuthController {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private CustomerUser customerUser;
+    
     @PostMapping("/signup")
     public AuthResponse add(@RequestBody User user) throws Exception {
         User newUser = new User();
@@ -39,10 +40,15 @@ public class AuthController {
         newUser.setImage(user.getImage());
         newUser.setMobile(user.getMobile());
         newUser.setSpecialisation(user.getSpecialisation());
-        newUser.setYears(user.getYears());
+        newUser.setExperience(user.getExperience());
         newUser.setCourt(user.getCourt());
-        newUser.setIsLawyer(user.getRole().equalsIgnoreCase("lawyer"));
-        newUser.setIsJudge(user.getRole().equalsIgnoreCase("judge"));
+        newUser.setIsLawyer(user.getRole() == User.UserRole.ADVOCATE || 
+                           user.getRole() == User.UserRole.SENIOR_ADVOCATE ||
+                           user.getRole() == User.UserRole.PUBLIC_PROSECUTOR);
+        newUser.setIsJudge(user.getRole() == User.UserRole.JUDGE ||
+                          user.getRole() == User.UserRole.DISTRICT_JUDGE ||
+                          user.getRole() == User.UserRole.HIGH_COURT_JUDGE ||
+                          user.getRole() == User.UserRole.SUPREME_COURT_JUDGE);
         newUser.setFirstName(user.getFirstName());
         newUser.setLastName(user.getLastName());
         newUser.setEmail(user.getEmail()); // Fix: Set email field
@@ -57,6 +63,7 @@ public class AuthController {
 
         return new AuthResponse(token,"Registered Successfully");
     }
+    
     @PostMapping("/login")
     public AuthResponse login(@RequestBody Login login) throws Exception {
         Authentication authentication=authenticate(login.getEmail(),login.getPassword());

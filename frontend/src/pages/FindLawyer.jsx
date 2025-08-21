@@ -21,13 +21,13 @@ import {
   Search as SearchIcon, 
   FilterList as FilterIcon,
   Clear as ClearIcon,
-  LocationOn,
-  Star
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import LawyerCard from '../components/LawyerCard';
-import { userService } from '../services/api';
+import { userService, chatService } from '../services/api';
 
 export default function FindLawyer() {
+  const navigate = useNavigate();
   const [lawyers, setLawyers] = useState([]);
   const [filteredLawyers, setFilteredLawyers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -273,10 +273,22 @@ export default function FindLawyer() {
     }
   };
 
-  const handleChatWithLawyer = (lawyerId) => {
-    // Navigate to chat page or open chat modal
-    console.log('Starting chat with lawyer:', lawyerId);
-    alert('Chat functionality will be implemented in the next phase.');
+  const handleChatWithLawyer = async (lawyerId) => {
+    try {
+      setLoading(true);
+      // Create or find existing chat with the lawyer
+      const response = await chatService.createChat([lawyerId], null, 'DIRECT');
+      
+      if (response.data.chatId) {
+        // Navigate to the chat page with the specific chat selected
+        navigate('/chatbot', { state: { selectedChatId: response.data.chatId } });
+      }
+    } catch (err) {
+      console.error('Error starting chat with lawyer:', err);
+      setError('Failed to start chat. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {

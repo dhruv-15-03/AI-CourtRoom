@@ -41,11 +41,29 @@ api.interceptors.response.use(
       message: error.message
     });
     
-    if (error.response?.status === 401) {
+    // Handle JWT token errors
+    if (error.response?.status === 401 || 
+        error.response?.status === 403 ||
+        (error.response?.data?.message && 
+         (error.response.data.message.includes('JWT') || 
+          error.response.data.message.includes('token') ||
+          error.response.data.message.includes('Unauthorized') ||
+          error.response.data.message.includes('expired')))) {
+      
+      console.warn('JWT token invalid or expired, redirecting to login...');
+      
+      // Clear all auth data
       localStorage.removeItem('authToken');
       localStorage.removeItem('userRole');
+      localStorage.removeItem('userProfile');
+      
+      // Dispatch logout event for AuthContext
+      window.dispatchEvent(new CustomEvent('forceLogout'));
+      
+      // Redirect to login
       window.location.href = '/login';
     }
+    
     return Promise.reject(error);
   }
 );
@@ -90,6 +108,8 @@ export const userService = {
 export const caseService = {
   // Basic CRUD
   createCase: (caseData) => api.post('/api/cases', caseData),
+  createIndianCase: (caseData) => api.post('/api/cases/create-indian-case', caseData),
+  getIndianTemplates: () => api.get('/api/cases/indian-templates'),
   getCaseById: (id) => api.get(`/api/cases/${id}`),
   getAllCases: (params = {}) => api.get('/api/cases/all', { params }),
   updateCase: (id, caseData) => api.put(`/api/cases/${id}`, caseData),
@@ -136,9 +156,16 @@ export const judgeService = {
 
 // Chat Services
 export const chatService = {
+  getChats: () => api.get('/api/chat/list'),
+  getChatMessages: (chatId, limit = 50) => api.get(`/api/chat/${chatId}/messages`, { params: { limit } }),
+  sendMessage: (chatId, content) => api.post(`/api/chat/${chatId}/send`, { content }),
+  createChat: (participantIds, chatName, chatType = 'DIRECT') => 
+    api.post('/api/chat/create', { participantIds, chatName, chatType }),
+  searchUsers: (query, limit = 10) => api.get('/api/chat/search-users', { params: { query, limit } }),
+  
+  // Legacy methods for backward compatibility
   getMessages: (chatId) => api.get(`/api/chat/${chatId}/messages`),
-  sendMessage: (chatId, message) => api.post(`/api/chat/${chatId}/messages`, { content: message }),
-  createChat: (participants) => api.post('/api/chat/create', { participants }),
+  createChat: (participants) => api.post('/api/chat/create', { participantIds: participants }),
 };
 
 // AI Services

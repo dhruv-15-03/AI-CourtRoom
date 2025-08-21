@@ -34,6 +34,7 @@ import {
   Cancel,
   Verified,
   TrendingUp,
+  Logout,
 } from "@mui/icons-material"
 import { userService } from "../services/api"
 import { useAuth } from "../contexts/AuthContext"
@@ -42,7 +43,7 @@ const presetAvatars = ["/avatars/avatar1.png", "/avatars/avatar2.png", "/avatars
 
 export default function UnifiedProfile() {
   const theme = useTheme()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const [profile, setProfile] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
   const [form, setForm] = useState({})
@@ -137,6 +138,24 @@ export default function UnifiedProfile() {
       court: profile.court || "",
       years: profile.years || "",
     })
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      setToast({ 
+        open: true, 
+        message: "Logged out successfully!", 
+        severity: "success" 
+      })
+    } catch (e) {
+      console.error("Logout error:", e)
+      setToast({
+        open: true,
+        message: "Error during logout, but you have been logged out.",
+        severity: "warning",
+      })
+    }
   }
 
   const getRoleDisplay = () => {
@@ -394,54 +413,76 @@ export default function UnifiedProfile() {
 
           {/* Action Buttons */}
           <Box sx={{ position: "absolute", top: 20, right: 20 }}>
-            {!isEditing ? (
-              <Tooltip title="Edit Profile">
+            <Stack direction="row" spacing={1}>
+              {/* Logout Button */}
+              <Tooltip title="Logout">
                 <IconButton
-                  onClick={() => setIsEditing(true)}
+                  onClick={handleLogout}
                   sx={{
                     bgcolor: "rgba(255,255,255,0.15)",
                     backdropFilter: "blur(10px)",
                     color: "white",
                     "&:hover": {
-                      bgcolor: "rgba(255,255,255,0.25)",
+                      bgcolor: "rgba(239, 68, 68, 0.2)",
                       transform: "scale(1.05)",
                     },
                     transition: "all 0.3s ease",
                   }}
                 >
-                  <Edit />
+                  <Logout />
                 </IconButton>
               </Tooltip>
-            ) : (
-              <Stack direction="row" spacing={1}>
-                <Tooltip title="Save Changes">
+              
+              {/* Edit Profile Button */}
+              {!isEditing ? (
+                <Tooltip title="Edit Profile">
                   <IconButton
-                    onClick={handleSave}
-                    disabled={saving}
-                    sx={{
-                      bgcolor: "#fbbf24",
-                      color: "#1e3a8a",
-                      "&:hover": { bgcolor: "#f59e0b" },
-                      "&:disabled": { bgcolor: "rgba(251, 191, 36, 0.5)" },
-                    }}
-                  >
-                    {saving ? <CircularProgress size={20} sx={{ color: "#1e3a8a" }} /> : <Save />}
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Cancel">
-                  <IconButton
-                    onClick={handleCancel}
+                    onClick={() => setIsEditing(true)}
                     sx={{
                       bgcolor: "rgba(255,255,255,0.15)",
+                      backdropFilter: "blur(10px)",
                       color: "white",
-                      "&:hover": { bgcolor: "rgba(255,255,255,0.25)" },
+                      "&:hover": {
+                        bgcolor: "rgba(255,255,255,0.25)",
+                        transform: "scale(1.05)",
+                      },
+                      transition: "all 0.3s ease",
                     }}
                   >
-                    <Cancel />
+                    <Edit />
                   </IconButton>
                 </Tooltip>
-              </Stack>
-            )}
+              ) : (
+                <Stack direction="row" spacing={1}>
+                  <Tooltip title="Save Changes">
+                    <IconButton
+                      onClick={handleSave}
+                      disabled={saving}
+                      sx={{
+                        bgcolor: "#fbbf24",
+                        color: "#1e3a8a",
+                        "&:hover": { bgcolor: "#f59e0b" },
+                        "&:disabled": { bgcolor: "rgba(251, 191, 36, 0.5)" },
+                      }}
+                    >
+                      {saving ? <CircularProgress size={20} sx={{ color: "#1e3a8a" }} /> : <Save />}
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Cancel">
+                    <IconButton
+                      onClick={handleCancel}
+                      sx={{
+                        bgcolor: "rgba(255,255,255,0.15)",
+                        color: "white",
+                        "&:hover": { bgcolor: "rgba(255,255,255,0.25)" },
+                      }}
+                    >
+                      <Cancel />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              )}
+            </Stack>
           </Box>
         </Box>
       </Paper>

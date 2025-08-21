@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { authService } from '../services/api';
+import { authService, userService } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -73,20 +73,64 @@ export const AuthProvider = ({ children }) => {
         },
       });
     }
+
+    // Listen for force logout events from API interceptor
+    const handleForceLogout = () => {
+      dispatch({ type: 'LOGOUT' });
+    };
+
+    window.addEventListener('forceLogout', handleForceLogout);
+
+    return () => {
+      window.removeEventListener('forceLogout', handleForceLogout);
+    };
   }, []);
 
   const login = async (credentials) => {
     dispatch({ type: 'LOGIN_START' });
     try {
-      const response = await authService.login(credentials);
+      // Login only needs email/password, not role
+      const loginPayload = {
+        email: (credentials.email || '').toLowerCase(),
+        password: credentials.password
+      };
+
+      const response = await authService.login(loginPayload);
       const { token, message } = response.data;
       
-      // Store auth data
+      // Store auth token temporarily
       localStorage.setItem('authToken', token);
-      localStorage.setItem('userRole', credentials.role);
       
-      // Decode user info from token or fetch from API
-      const user = { role: credentials.role, email: credentials.email };
+      // Fetch user profile to get actual role from backend
+      const profileResponse = await userService.getProfile();
+      const userProfile = profileResponse.data;
+      
+      // Map backend role to frontend display role
+      const mapBackendRoleToFrontend = (backendRole) => {
+        switch (backendRole) {
+          case 'ADVOCATE':
+          case 'SENIOR_ADVOCATE':
+          case 'PUBLIC_PROSECUTOR':
+            return 'lawyer';
+          case 'JUDGE':
+          case 'DISTRICT_JUDGE':
+          case 'HIGH_COURT_JUDGE':
+          case 'SUPREME_COURT_JUDGE':
+            return 'judge';
+          case 'CITIZEN':
+          default:
+            return 'user';
+        }
+      };
+      
+      const frontendRole = mapBackendRoleToFrontend(userProfile.role);
+      
+      // Store user data with mapped role for frontend routing
+      localStorage.setItem('userRole', frontendRole);
+      const user = { 
+        ...userProfile,
+        role: frontendRole 
+      };
       localStorage.setItem('userProfile', JSON.stringify(user));
 
       dispatch({
@@ -108,17 +152,45 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     dispatch({ type: 'LOGIN_START' });
     try {
-      console.log('Logging in with credentials:', userData);
+      // Normalize payload for backend expectations
+      const mapRole = (role) => {
+        switch ((role || '').toLowerCase()) {
+          case 'lawyer':
+            return 'ADVOCATE';
+          case 'judge':
+            return 'JUDGE';
+          case 'user':
+          default:
+            return 'CITIZEN';
+        }
+      };
 
-      const response = await authService.register(userData);
+      const payload = {
+        ...userData,
+        role: mapRole(userData.role),
+        email: (userData.email || '').toLowerCase(),
+        ...(userData.years != null && userData.experience == null
+          ? { experience: parseInt(userData.years) }
+          : {}),
+      };
+
+      const sanitized = JSON.parse(
+        JSON.stringify(payload, (key, value) => {
+          if (typeof value === 'number' && Number.isNaN(value)) return null;
+          return value;
+        })
+      );
+
+      const response = await authService.register(sanitized);
       const { token, message } = response.data;
       
       localStorage.setItem('authToken', token);
-      localStorage.setItem('userRole', userData.role);
+  // Keep UI role as originally chosen for client-side routing
+  localStorage.setItem('userRole', userData.role);
       
       const user = { 
         role: userData.role, 
-        email: userData.email,
+        email: (userData.email || '').toLowerCase(),
         firstName: userData.firstName,
         lastName: userData.lastName 
       };

@@ -121,22 +121,23 @@ const RegisterPage = ({ showNotification }) => {
     if (!validateForm()) return;
 
     try {
+      // Prepare UI payload; normalization to backend happens in AuthContext.register
       const userData = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: formData.email.toLowerCase(),
         mobile: parseInt(formData.mobile),
         password: formData.password,
-        role: formData.role,
+        role: formData.role, // 'user' | 'lawyer' | 'judge' (mapped later)
         ...(formData.role === 'lawyer' && {
           specialisation: formData.specialisation.trim(),
           fees: parseInt(formData.fees),
-          description: formData.description.trim() || 'Experienced lawyer',
-          image: '' // Default empty image
+          description: (formData.description || '').trim() || 'Experienced lawyer',
+          image: ''
         }),
         ...(formData.role === 'judge' && {
           bench: formData.bench.trim(),
-          years: parseInt(formData.years),
+          years: parseInt(formData.years), // will be mapped to experience
           court: formData.court.trim()
         })
       };

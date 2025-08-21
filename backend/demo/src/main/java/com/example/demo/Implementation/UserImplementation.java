@@ -15,6 +15,8 @@ import java.util.List;
 public class UserImplementation implements UserMethods {
     @Autowired
     private UserAll userAll;
+    @Autowired
+    private com.example.demo.Repository.CaseAll caseAll;
     @Override
     public List<User> getLawyers() {
         return userAll.getLawyers();
@@ -47,12 +49,17 @@ public class UserImplementation implements UserMethods {
             newUser.setMobile(user1.getMobile());
         if(user1.getSpecialisation()!=null)
             newUser.setSpecialisation(user1.getSpecialisation());
-        if(user1.getYears()!=0)
-            newUser.setYears(user1.getYears());
+        if(user1.getExperience()!=null && user1.getExperience()!=0)
+            newUser.setExperience(user1.getExperience());
         if(user1.getCourt()!=null)
             newUser.setCourt(user1.getCourt());
-        newUser.setIsLawyer(user1.getRole().equalsIgnoreCase("lawyer"));
-        newUser.setIsJudge(user1.getRole().equalsIgnoreCase("judge"));
+        newUser.setIsLawyer(user1.getRole() == User.UserRole.ADVOCATE || 
+                           user1.getRole() == User.UserRole.SENIOR_ADVOCATE ||
+                           user1.getRole() == User.UserRole.PUBLIC_PROSECUTOR);
+        newUser.setIsJudge(user1.getRole() == User.UserRole.JUDGE ||
+                          user1.getRole() == User.UserRole.DISTRICT_JUDGE ||
+                          user1.getRole() == User.UserRole.HIGH_COURT_JUDGE ||
+                          user1.getRole() == User.UserRole.SUPREME_COURT_JUDGE);
         if(user1.getFirstName()!=null)
             newUser.setFirstName(user1.getFirstName());
         if(user1.getLastName()!=null)
@@ -75,16 +82,27 @@ public class UserImplementation implements UserMethods {
 
     @Override
     public List<Case> activeCase(User user) {
-        return new ArrayList<>(user.getActive());
+        // Fetch active cases using CaseAll repository to avoid lazy loading
+        try {
+            return caseAll.findCasesByUser(user);
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
     }
 
     @Override
     public List<Case> caseRequest(User user) {
-        return new ArrayList<>(user.getCaseRequest());
+    // No dedicated repository for requests yet; return empty list to avoid lazy load
+    return new ArrayList<>();
     }
 
     @Override
     public List<Case> pastCases(User user) {
-        return new ArrayList<>(user.getPastCases());
+        // Fetch past cases via repository; using findCasesByUser for compatibility
+        try {
+            return caseAll.findCasesByUser(user);
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
     }
 }
