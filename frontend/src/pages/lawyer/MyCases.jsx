@@ -11,7 +11,6 @@ import {
   CircularProgress,
   Alert
 } from '@mui/material';
-import LawyerLayout from '../../components/LawyerLayout';
 import EventIcon from '@mui/icons-material/Event';
 import GavelIcon from '@mui/icons-material/Gavel';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -173,24 +172,20 @@ export default function MyCases({ mode, setMode }) {
 
   if (loading) {
     return (
-      <LawyerLayout mode={mode} setMode={setMode}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-          <CircularProgress />
-        </Box>
-      </LawyerLayout>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <LawyerLayout mode={mode} setMode={setMode}>
-        <Alert severity="error">{error}</Alert>
-      </LawyerLayout>
+      <Alert severity="error">{error}</Alert>
     );
   }
 
   return (
-    <LawyerLayout mode={mode} setMode={setMode}>
+    <>
       <Typography variant="h4" gutterBottom>
         My Cases
       </Typography>
@@ -221,6 +216,6 @@ export default function MyCases({ mode, setMode }) {
           </Grid>
         )}
       </TabPanel>
-    </LawyerLayout>
+    </>
   );
 }

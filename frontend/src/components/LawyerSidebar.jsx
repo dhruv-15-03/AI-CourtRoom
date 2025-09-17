@@ -10,7 +10,8 @@ import BalanceIcon from "@mui/icons-material/Balance"
 import Brightness4Icon from "@mui/icons-material/Brightness4"
 import { useNavigate, useLocation } from "react-router-dom"
 
-export default function LawyerSidebar({ mode, setMode }) {
+// Responsive-friendly sidebar component. Accepts Drawer props from parent layout.
+export default function LawyerSidebar({ mode, setMode, variant = "permanent", open, onClose, drawerWidth = 280, sx = {} }) {
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -24,11 +25,15 @@ export default function LawyerSidebar({ mode, setMode }) {
 
   return (
     <Drawer
-      variant="permanent"
+      variant={variant}
+      open={open}
+      onClose={onClose}
+      ModalProps={{ keepMounted: true }}
       sx={{
-        width: 280,
+        width: drawerWidth,
+        display: sx.display, // allow parent to control visibility per breakpoint
         [`& .MuiDrawer-paper`]: {
-          width: 280,
+          width: drawerWidth,
           boxSizing: "border-box",
           background:
             mode === "light"

@@ -2,9 +2,9 @@ version: '3.8'
 
 services:
   backend:
-    image: dhruv1503/verimed-backend:latest
+    image: dhruv1503/ai-court:latest
     ports:
-      - "8082:8082"
+      - "8081:8081"
     env_file:
       - .env
     restart: always

@@ -40,18 +40,18 @@ public class CaseRequest {
     @Column(nullable = false)
     private RequestStatus status = RequestStatus.PENDING;
     
-    private String urgency; // HIGH, MEDIUM, LOW
+    private String urgency; 
     
     private Double budget;
     
-    private String contactPreference; // EMAIL, PHONE, CHAT
+    private String contactPreference;
     
     @Column(updatable = false)
     private LocalDateTime requestedAt;
     
     private LocalDateTime respondedAt;
     
-    private String lawyerResponse; // Accept/Reject message
+    private String lawyerResponse; 
     
     @PrePersist
     protected void onCreate() {

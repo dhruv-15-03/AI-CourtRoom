@@ -10,7 +10,6 @@ import {
   ListItemAvatar,
   ListItemText,
   Avatar,
-  Divider,
   Button,
   Dialog,
   DialogTitle,
@@ -59,6 +58,24 @@ const ChatInterface = ({ userRole = 'user' }) => {
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
 
+  // Helpers to compute safe display names
+  const getUserName = (u) => {
+    if (!u) return 'Unknown';
+    const full = [u.fullName, [u.firstName, u.lastName].filter(Boolean).join(' '), u.email]
+      .find(v => v && String(v).trim().length);
+    return full || (u.id ? `User ${u.id}` : 'Unknown');
+  };
+
+  const getChatName = (chat, meId) => {
+    if (!chat) return '';
+    if (chat.displayName && chat.displayName.trim()) return chat.displayName;
+    if (chat.chatName && chat.chatName.trim()) return chat.chatName;
+    const participants = chat.participants || chat.users || [];
+    const others = participants.filter(p => String(p.id) !== String(meId));
+    const base = others.slice(0, 3).map(getUserName).join(', ');
+    return base || 'You';
+  };
+
   // Initialize WebSocket connection
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -73,14 +90,11 @@ const ChatInterface = ({ userRole = 'user' }) => {
         setConnected(true);
         setStompClient(client);
         
-        // Subscribe to user-specific messages
-        const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-        if (userProfile.id) {
-          client.subscribe(`/user/${userProfile.id}/queue/messages`, (message) => {
-            const messageData = JSON.parse(message.body);
-            handleNewMessage(messageData);
-          });
-        }
+        // Subscribe to the current user's queue (Spring user destination)
+        client.subscribe(`/user/queue/messages`, (message) => {
+          const messageData = JSON.parse(message.body);
+          handleNewMessage(messageData);
+        });
       },
       (error) => {
         console.error('WebSocket connection error:', error);
@@ -95,12 +109,10 @@ const ChatInterface = ({ userRole = 'user' }) => {
     };
   }, []);
 
-  // Load chats on component mount
   useEffect(() => {
     loadChats();
   }, []);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -113,10 +125,13 @@ const ChatInterface = ({ userRole = 'user' }) => {
     try {
       setLoading(true);
       const response = await chatService.getChats();
-      setChats(response.data.chats || []);
+      const loadedChats = response.data.chats || [];
+      setChats(loadedChats);
+      return loadedChats; 
     } catch (err) {
       setError('Failed to load chats');
       console.error('Error loading chats:', err);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -147,7 +162,6 @@ const ChatInterface = ({ userRole = 'user' }) => {
       await chatService.sendMessage(selectedChat.id, newMessage.trim());
       setNewMessage('');
       
-      // Add message optimistically for better UX
       const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
       const optimisticMessage = {
         id: Date.now(),
@@ -163,7 +177,6 @@ const ChatInterface = ({ userRole = 'user' }) => {
       };
       setMessages(prev => [...prev, optimisticMessage]);
       
-      // Focus back to input
       messageInputRef.current?.focus();
     } catch (err) {
       setError('Failed to send message');
@@ -172,19 +185,26 @@ const ChatInterface = ({ userRole = 'user' }) => {
   };
 
   const handleNewMessage = (messageData) => {
+    console.log('Received new message:', messageData);
+    
+    // Update messages if this is for the currently selected chat
     if (selectedChat && messageData.chatId === selectedChat.id) {
       setMessages(prev => {
-        // Check if message already exists (optimistic update)
         const exists = prev.some(msg => msg.id === messageData.id);
         if (exists) return prev;
         return [...prev, messageData];
       });
     }
     
-    // Update chat list with new last message
+    // Update chat list with latest message info
     setChats(prev => prev.map(chat => 
       chat.id === messageData.chatId 
-        ? { ...chat, lastMessageContent: messageData.content, lastMessageAt: messageData.sentAt }
+        ? { 
+            ...chat, 
+            lastMessageContent: messageData.content, 
+            lastMessageAt: messageData.sentAt,
+            lastMessageSender: messageData.sender
+          }
         : chat
     ));
   };
@@ -204,28 +224,67 @@ const ChatInterface = ({ userRole = 'user' }) => {
   };
 
   const handleCreateChat = async () => {
-    if (selectedUsers.length === 0) return;
+    console.log('handleCreateChat called, selectedUsers:', selectedUsers);
+    
+    if (selectedUsers.length === 0) {
+      console.log('No users selected, returning early');
+      return;
+    }
 
     try {
       const participantIds = selectedUsers.map(user => user.id);
+      console.log('Participant IDs:', participantIds);
+      console.log('Chat name:', chatName);
+      
+      console.log('Calling chatService.createChat...');
       const response = await chatService.createChat(participantIds, chatName || null);
+      console.log('Chat creation response:', response);
       
       setShowNewChatDialog(false);
       setSelectedUsers([]);
       setChatName('');
       setUserSearchQuery('');
       
-      // Reload chats and select the new one
-      await loadChats();
-      if (response.data.chatId) {
-        const newChat = chats.find(chat => chat.id === response.data.chatId);
-        if (newChat) {
-          handleChatSelect(newChat);
+      if (response.data && response.data.chatId) {
+        // Wait a moment for the database transaction to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Reload chats and select the new one
+        console.log('Reloading chats...');
+        const updatedChats = await loadChats();
+        
+        console.log('Looking for new chat with ID:', response.data.chatId);
+        console.log('Available chats:', updatedChats.map(c => ({ id: c.id, name: c.displayName || c.chatName })));
+        
+        let foundChat = updatedChats.find(chat => chat.id === response.data.chatId);
+        
+        if (!foundChat && participantIds.length === 1) {
+          // Try to find by other participant for direct chats
+          const otherUserId = participantIds[0];
+          foundChat = updatedChats.find(chat => 
+            chat.otherUser && chat.otherUser.id === otherUserId
+          );
+          console.log('Searched by participant ID:', otherUserId, 'Found:', foundChat);
         }
+        
+        if (foundChat) {
+          console.log('Found chat, selecting it:', foundChat);
+          handleChatSelect(foundChat);
+        } else {
+          console.log('New chat not found in chats list, but creation was successful');
+          // Force a reload in case of timing issues
+          setTimeout(() => {
+            console.log('Retrying chat load after delay...');
+            loadChats();
+          }, 1000);
+        }
+      } else {
+        console.log('No chatId in response data');
       }
     } catch (err) {
       setError('Failed to create chat');
       console.error('Error creating chat:', err);
+      console.error('Error details:', err.response?.data);
     }
   };
 
@@ -342,7 +401,7 @@ const ChatInterface = ({ userRole = 'user' }) => {
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant="body2" noWrap>
-                          {chat.displayName || 'Unknown'}
+                          {getChatName(chat, JSON.parse(localStorage.getItem('userProfile') || '{}').id)}
                         </Typography>
                         {chat.otherUser?.isLawyer && (
                           <Chip label="Lawyer" size="small" color="success" />
@@ -398,7 +457,7 @@ const ChatInterface = ({ userRole = 'user' }) => {
                   </Avatar>
                   <Box>
                     <Typography variant="h6">
-                      {selectedChat.displayName || 'Unknown'}
+                      {getChatName(selectedChat, JSON.parse(localStorage.getItem('userProfile') || '{}').id)}
                     </Typography>
                     {selectedChat.otherUser && (
                       <Box sx={{ display: 'flex', gap: 1 }}>

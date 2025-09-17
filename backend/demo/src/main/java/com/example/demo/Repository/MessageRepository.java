@@ -18,6 +18,11 @@ public interface MessageRepository extends JpaRepository<Message, Integer> {
     
     // Find messages by chat
     @Query("SELECT m FROM Message m WHERE m.chat = :chat ORDER BY m.sentAt ASC")
+    List<Message> findByChatOrderBySentAtAsc(@Param("chat") Chat chat);
+    
+    // Find messages by chat in descending order
+    @Query("SELECT m FROM Message m WHERE m.chat = :chat ORDER BY m.sentAt DESC")
+    List<Message> findByChatOrderBySentAtDesc(@Param("chat") Chat chat);
     List<Message> findMessagesByChat(@Param("chat") Chat chat);
     
     // Find messages by chat with pagination

@@ -23,6 +23,6 @@ public class ContentTypeConfig implements WebMvcConfigurer {
             MediaType.valueOf("application/json; charset=utf-8")
         ));
         
-        converters.add(0, jsonConverter); // Add at the beginning to prioritize
+        converters.add(0, jsonConverter); 
     }
 }

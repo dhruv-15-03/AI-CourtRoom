@@ -15,7 +15,6 @@ import {
   CircularProgress,
   Alert,
 } from "@mui/material"
-import LawyerLayout from "../../components/LawyerLayout"
 import Brightness4Icon from "@mui/icons-material/Brightness4"
 import Brightness7Icon from "@mui/icons-material/Brightness7"
 import GavelIcon from "@mui/icons-material/Gavel"
@@ -36,25 +35,21 @@ export default function Dashboard({ mode, setMode }) {
 
   if (loading) {
     return (
-      <LawyerLayout mode={mode} setMode={setMode}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-          <CircularProgress />
-        </Box>
-      </LawyerLayout>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
     )
   }
 
   if (error) {
     return (
-      <LawyerLayout mode={mode} setMode={setMode}>
-        <Alert severity="error" action={
-          <IconButton onClick={refetch} size="small">
-            <TrendingUpIcon />
-          </IconButton>
-        }>
-          {error}
-        </Alert>
-      </LawyerLayout>
+      <Alert severity="error" action={
+        <IconButton onClick={refetch} size="small">
+          <TrendingUpIcon />
+        </IconButton>
+      }>
+        {error}
+      </Alert>
     )
   }
 
@@ -102,7 +97,7 @@ export default function Dashboard({ mode, setMode }) {
   ]
 
   return (
-    <LawyerLayout mode={mode} setMode={setMode}>
+    <>
       <Box
         sx={{
           display: "flex",
@@ -412,6 +407,6 @@ export default function Dashboard({ mode, setMode }) {
           </CardContent>
         </Card>
       </Box>
-    </LawyerLayout>
+    </>
   )
 }

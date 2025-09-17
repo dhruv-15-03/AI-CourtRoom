@@ -159,13 +159,12 @@ export const chatService = {
   getChats: () => api.get('/api/chat/list'),
   getChatMessages: (chatId, limit = 50) => api.get(`/api/chat/${chatId}/messages`, { params: { limit } }),
   sendMessage: (chatId, content) => api.post(`/api/chat/${chatId}/send`, { content }),
-  createChat: (participantIds, chatName, chatType = 'DIRECT') => 
+  createChat: (participantIds, chatName = null, chatType = 'DIRECT') => 
     api.post('/api/chat/create', { participantIds, chatName, chatType }),
   searchUsers: (query, limit = 10) => api.get('/api/chat/search-users', { params: { query, limit } }),
   
   // Legacy methods for backward compatibility
   getMessages: (chatId) => api.get(`/api/chat/${chatId}/messages`),
-  createChat: (participants) => api.post('/api/chat/create', { participantIds: participants }),
 };
 
 // AI Services

@@ -18,4 +18,12 @@ public interface UserAll extends JpaRepository<User,Integer> {
 
     @Query("SELECT u FROM User u where u.isJudge=true ")
     public List<User> getJudges();
+    
+    @Query("SELECT u FROM User u WHERE " +
+           "(LOWER(u.firstName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+           "u.id != :currentUserId")
+    public List<User> searchUsersByQuery(@Param("query") String query, 
+                                       @Param("currentUserId") Integer currentUserId);
 }

@@ -17,7 +17,6 @@ import {
   Alert,
   Snackbar
 } from '@mui/material';
-import LawyerLayout from '../../components/LawyerLayout';
 import PersonIcon from '@mui/icons-material/Person';
 import EventIcon from '@mui/icons-material/Event';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -102,24 +101,20 @@ export default function CaseRequests({ mode, setMode }) {
 
   if (loading) {
     return (
-      <LawyerLayout mode={mode} setMode={setMode}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-          <CircularProgress />
-        </Box>
-      </LawyerLayout>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <LawyerLayout mode={mode} setMode={setMode}>
-        <Alert severity="error">{error}</Alert>
-      </LawyerLayout>
+      <Alert severity="error">{error}</Alert>
     );
   }
 
   return (
-    <LawyerLayout mode={mode} setMode={setMode}>
+    <>
       <Typography variant="h4" gutterBottom>
         Case Requests
       </Typography>
@@ -307,6 +302,6 @@ export default function CaseRequests({ mode, setMode }) {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </LawyerLayout>
+    </>
   );
 }

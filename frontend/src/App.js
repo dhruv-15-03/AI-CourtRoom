@@ -26,6 +26,7 @@ import PendingCases from './pages/judge/PendingCases.jsx';
 import JudgeCaseDetails from './pages/judge/CaseDetails.jsx';
 import Judgments from './pages/judge/Judgments.jsx';
 import JudgeProfile from './pages/judge/JudgeProfile.jsx';
+import JudgeChats from './pages/judge/Chats.jsx';
 
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -198,6 +199,7 @@ function AppContent() {
                   <Route path="/judge/*" element={<JudgeLayout mode={mode} setMode={setMode} />}>                    
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<JudgeDashboard />} />
+                    <Route path="chats" element={<JudgeChats />} />
                     <Route path="pending-cases" element={<PendingCases />} />
                     <Route path="case-details/:id" element={<JudgeCaseDetails />} />
                     <Route path="judgments" element={<Judgments />} />

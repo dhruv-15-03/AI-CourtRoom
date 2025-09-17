@@ -14,8 +14,12 @@ import java.util.Optional;
 @Repository
 public interface ChatRepository extends JpaRepository<Chat, Integer> {
     
+    // Find chats by user with JOIN FETCH to avoid lazy loading
+    @Query("SELECT DISTINCT c FROM Chat c JOIN FETCH c.users u WHERE u = :user AND c.isActive = true ORDER BY COALESCE(c.lastMessageAt, c.createdAt) DESC")
+    List<Chat> findChatsWithUsersByUser(@Param("user") User user);
+    
     // Find chats by user
-    @Query("SELECT c FROM Chat c JOIN c.users u WHERE u = :user AND c.isActive = true ORDER BY c.lastMessageAt DESC")
+    @Query("SELECT c FROM Chat c JOIN c.users u WHERE u = :user AND c.isActive = true ORDER BY COALESCE(c.lastMessageAt, c.createdAt) DESC")
     List<Chat> findChatsByUser(@Param("user") User user);
     
     // Find direct chat between two users

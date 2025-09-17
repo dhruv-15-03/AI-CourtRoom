@@ -115,7 +115,7 @@ public class User {
     @JsonIgnore
     private Set<Case> caseRequest;
     
-    @ManyToMany
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
         name = "user_chats",
         joinColumns = @JoinColumn(name = "user_id"),
