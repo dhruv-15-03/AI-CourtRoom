@@ -1,0 +1,34 @@
+# Maven build artifacts (except target)
+.mvn/
+mvnw
+mvnw.cmd
+
+# IDE files
+.idea/
+.vscode/
+.eclipse/
+*.iml
+*.ipr
+*.iws
+
+# Environment files
+.env
+.env.local
+
+# Documentation
+README.md
+HELP.md
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+logs/
+
+# Test files
+src/test/
+
+# Maven wrapper
+.mvn/wrapper/maven-wrapper.jar
