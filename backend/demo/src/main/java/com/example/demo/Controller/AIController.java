@@ -34,16 +34,22 @@ public class AIController {
     @PostMapping("/chat")
     public ResponseEntity<?> chat(@RequestBody Map<String, Object> request) {
         try {
+            log.info("Received chat request: {}", request);
+            
             if (geminiApiKey == null || geminiApiKey.isBlank()) {
+                log.error("Gemini API key not configured");
                 return ResponseEntity.badRequest()
                     .body(Map.of("error", "Gemini API key not configured. Please set GEMINI_API_KEY in .env file"));
             }
 
             String userMessage = (String) request.get("message");
             if (userMessage == null || userMessage.isBlank()) {
+                log.warn("Empty message received");
                 return ResponseEntity.badRequest()
                     .body(Map.of("error", "Message is required"));
             }
+            
+            log.info("Processing message: {}", userMessage.substring(0, Math.min(50, userMessage.length())));
 
             // Create system instruction for simple, child-friendly legal explanations
             String systemPrompt = """
