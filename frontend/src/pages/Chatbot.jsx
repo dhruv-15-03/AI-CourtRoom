@@ -1,34 +1,21 @@
 import { useState } from 'react';
 import { Box, TextField, Typography, List, ListItem, Card } from '@mui/material';
+import { aiService } from '../services/api';
 
 export default function Chatbot() {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
   const fetchGeminiResponse = async (userInput) => {
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`;
-    const payload = {
-      contents: [{ parts: [{ text: userInput }] }],
-    };
-
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      return responseText;
+      // Call backend AI service instead of calling Gemini directly
+      const response = await aiService.chatWithAI(userInput);
+      return response.data.response || 'I\'m here to help with your legal questions!';
     } catch (err) {
-      console.error('Gemini API fetch error:', err);
-      return 'Error contacting Gemini API.';
+      console.error('AI service error:', err);
+      const errorMessage = err?.response?.data?.error || err?.message || 'Failed to get AI response';
+      return `⚠️ ${errorMessage}`;
     }
   };
 

@@ -48,7 +48,7 @@ export default function AIAssistant() {
   const [error, setError] = useState("")
 
   const handleStart = () => {
-    navigate("/ai-chat")
+    setOpen(true)  
   }
 
   const handleSend = async () => {
@@ -78,7 +78,13 @@ export default function AIAssistant() {
           },
         ])
       } catch (err) {
-        console.error("AI Error:", err)
+        console.error("AI Error Details:", {
+          status: err?.response?.status,
+          statusText: err?.response?.statusText,
+          data: err?.response?.data,
+          message: err?.message
+        })
+        
         const errorMessage = err?.response?.data?.error || err?.message || "Failed to get AI response"
         setError(errorMessage)
         
