@@ -9,15 +9,17 @@ import {
   Box,
   List,
   ListItem,
-  useTheme,
+  useTheme, 
   alpha,
   Chip,
   Avatar,
   IconButton,
   Divider,
+  CircularProgress,
 } from "@mui/material"
 import { Psychology, Chat, Send, Close, AutoAwesome, AccountCircle, SmartToy } from "@mui/icons-material"
 import { useNavigate } from "react-router-dom"
+import { aiService } from "../services/api"
 
 const modalStyle = {
   position: "absolute",
@@ -42,24 +44,55 @@ export default function AIAssistant() {
   const navigate = useNavigate()
   const [input, setInput] = useState("")
   const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const handleStart = () => {
     navigate("/ai-chat")
-    // if (attemptsLeft > 0) {
-    //   setAttemptsLeft(attemptsLeft - 1);
-
-    //   setOpen(true);
-    // }
   }
 
-  const handleSend = () => {
-    if (input.trim()) {
+  const handleSend = async () => {
+    if (input.trim() && !loading) {
+      const userMessage = input.trim()
+      setInput("")
+      setError("")
+      
+      // Add user message to conversation
       setConversation((prev) => [
         ...prev,
-        { sender: "user", text: input },
-        { sender: "ai", text: "Dummy AI response for: " + input },
+        { sender: "user", text: userMessage },
       ])
-      setInput("")
+      
+      setLoading(true)
+      
+      try {
+        // Call backend AI service
+        const response = await aiService.chatWithAI(userMessage)
+        
+        // Add AI response to conversation
+        setConversation((prev) => [
+          ...prev,
+          { 
+            sender: "ai", 
+            text: response.data.response || "I'm here to help with your legal questions!",
+          },
+        ])
+      } catch (err) {
+        console.error("AI Error:", err)
+        const errorMessage = err?.response?.data?.error || err?.message || "Failed to get AI response"
+        setError(errorMessage)
+        
+        // Add error message to conversation
+        setConversation((prev) => [
+          ...prev,
+          { 
+            sender: "ai", 
+            text: "⚠️ Sorry, I couldn't process that. " + errorMessage,
+          },
+        ])
+      } finally {
+        setLoading(false)
+      }
     }
   }
 
@@ -315,7 +348,8 @@ export default function AIAssistant() {
                             p: 2,
                             borderRadius: 2,
                             fontSize: "0.95rem",
-                            lineHeight: 1.5,
+                            lineHeight: 1.6,
+                            whiteSpace: "pre-line",
                           }}
                         >
                           {msg.text}
@@ -323,11 +357,66 @@ export default function AIAssistant() {
                       </Box>
                     </ListItem>
                   ))}
+                  
+                  {/* Loading indicator */}
+                  {loading && (
+                    <ListItem
+                      sx={{
+                        display: "flex",
+                        justifyContent: "flex-start",
+                        px: 0,
+                        py: 1,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 1,
+                        }}
+                      >
+                        <Avatar
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            backgroundColor: "#d97706",
+                            fontSize: "0.875rem",
+                          }}
+                        >
+                          <SmartToy />
+                        </Avatar>
+                        <Box
+                          sx={{
+                            backgroundColor: theme.palette.mode === "dark" ? "#374151" : "#f3f4f6",
+                            p: 2,
+                            borderRadius: 2,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                          }}
+                        >
+                          <CircularProgress size={16} sx={{ color: "#d97706" }} />
+                          <Typography variant="body2" sx={{ color: theme.palette.mode === "dark" ? "#9ca3af" : "#64748b" }}>
+                            Thinking...
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </ListItem>
+                  )}
                 </List>
               )}
             </Box>
 
             <Divider />
+
+            {/* Error Message */}
+            {error && (
+              <Box sx={{ px: 3, pt: 2 }}>
+                <Typography variant="body2" sx={{ color: "#ef4444", fontSize: "0.875rem" }}>
+                  {error}
+                </Typography>
+              </Box>
+            )}
 
             {/* Input Area */}
             <Box sx={{ p: 3, backgroundColor: theme.palette.background.paper }}>
@@ -359,7 +448,7 @@ export default function AIAssistant() {
                 <Button
                   variant="contained"
                   onClick={handleSend}
-                  disabled={!input.trim()}
+                  disabled={!input.trim() || loading}
                   sx={{
                     background: `linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)`,
                     minWidth: 56,
@@ -373,7 +462,7 @@ export default function AIAssistant() {
                     },
                   }}
                 >
-                  <Send />
+                  {loading ? <CircularProgress size={24} sx={{ color: "white" }} /> : <Send />}
                 </Button>
               </Box>
 

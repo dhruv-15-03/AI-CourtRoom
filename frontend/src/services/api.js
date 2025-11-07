@@ -169,10 +169,13 @@ export const chatService = {
 
 // AI Services
 export const aiService = {
-  askQuestion: (question, context = {}) => aiApi.post('/ask', { question, context }),
+  chatWithAI: (message) => api.post('/api/ai/chat', { message }),
+  checkHealth: () => api.get('/api/ai/health'),
+  
+  // Legacy methods (kept for backward compatibility)
+  askQuestion: (question, context = {}) => api.post('/api/ai/chat', { message: question, context }),
   getQuestionnaire: (caseType) => aiApi.get(`/questionnaire/${caseType}`),
   submitQuestionnaire: (answers) => aiApi.post('/questionnaire/submit', answers),
-  chatWithAI: (message, conversationId) => aiApi.post('/chat', { message, conversationId }),
 };
 
 export default api;

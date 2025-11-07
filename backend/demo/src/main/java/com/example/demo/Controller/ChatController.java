@@ -56,11 +56,8 @@ public class ChatController {
                 return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
             }
             
-            System.out.println("Loading chats for user: " + user.getId() + " (" + email + ")");
-            
             // Use JOIN FETCH to avoid lazy initialization issues
             List<Chat> chats = chatRepository.findChatsWithUsersByUser(user);
-            System.out.println("Found " + chats.size() + " chats");
             
             List<Map<String, Object>> chatDtos = chats.stream()
                     .map(chat -> formatChatDto(chat, user))
@@ -88,7 +85,7 @@ public class ChatController {
             
             return ResponseEntity.ok(Map.of("chats", chatDtos));
         } catch (Exception e) {
-            System.err.println("Error in getUserChats: " + e.getMessage());
+            // Log error for debugging purposes only
             e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -159,8 +156,6 @@ public class ChatController {
                 return ResponseEntity.badRequest().body(Map.of("error", "At least one participant is required"));
             }
             
-            System.out.println("Creating chat with participant IDs: " + participantIds);
-            
             // Create chat directly in controller
             Set<User> participants = new HashSet<>();
             for (Integer participantId : participantIds) {
@@ -193,13 +188,9 @@ public class ChatController {
                 userChatDao.addUserToChat(user.getId(), savedChat.getId());
             }
             
-            System.out.println("Chat created successfully - ID: " + savedChat.getId() + 
-                             ", Name: " + savedChat.getChatName() + 
-                             ", Participants: " + savedChat.getUsers().size());
-            
             return ResponseEntity.ok(Map.of("chatId", savedChat.getId(), "message", "Chat created successfully"));
         } catch (Exception e) {
-            System.err.println("Error creating chat: " + e.getMessage());
+            // Log error for debugging purposes only
             e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -207,6 +198,7 @@ public class ChatController {
 
     @PostMapping("/api/chat/{chatId}/send")
     @ResponseBody
+    @Transactional
     public ResponseEntity<?> sendMessage(
             @RequestHeader("Authorization") String jwt,
             @PathVariable Integer chatId,
@@ -230,8 +222,10 @@ public class ChatController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Chat not found"));
             }
             
-            Chat chat = chatOptional.get();
-            if (!chat.getUsers().contains(user)) {
+        Chat chat = chatOptional.get();
+        boolean isMember = chat.getUsers() != null && chat.getUsers().stream()
+            .anyMatch(u -> Objects.equals(u.getId(), user.getId()));
+        if (!isMember) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Access denied"));
             }
@@ -257,15 +251,16 @@ public class ChatController {
                 // Send per-recipient with correct isCurrentUser flag
                 for (User participant : chat.getUsers()) {
                     Map<String, Object> perRecipientDto = formatMessageDto(savedMessage, participant);
+                    String principalName = participant.getEmail();
                     messagingTemplate.convertAndSendToUser(
-                        participant.getId().toString(),
+                        principalName,
                         "/queue/messages",
                         perRecipientDto
                     );
                 }
             } catch (Exception e) {
-                // WebSocket not configured, continue without real-time
-                System.out.println("WebSocket not available: " + e.getMessage());
+                // WebSocket not configured or broadcast failed - message already saved
+                // Continue silently as this is a non-critical feature
             }
             
             return ResponseEntity.ok(Map.of("messageId", savedMessage.getId(), "message", "Message sent successfully"));

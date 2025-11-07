@@ -64,15 +64,12 @@ export default function UnifiedProfile() {
   }, [mounted])
 
   const loadProfile = async () => {
-    console.log("🔍 Loading profile...", { user })
     setLoading(true)
     setError("")
     try {
       const token = localStorage.getItem("authToken")
-      console.log("🔑 Token exists:", !!token, token?.substring(0, 20) + "...")
 
       const { data } = await userService.getProfile()
-      console.log("✅ Profile loaded successfully:", data)
       setProfile(data)
       setForm({
         firstName: data.firstName || "",

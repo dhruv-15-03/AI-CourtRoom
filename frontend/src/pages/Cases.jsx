@@ -93,7 +93,6 @@ const Cases = () => {
       setLoading(true);
       setError('');
       const response = await userService.getCases();
-      console.log('Cases API response:', response.data);
       
       setActiveCases(response.data.activeCases || []);
       setPastCases(response.data.pastCases || []);

@@ -43,6 +43,7 @@ const ChatInterface = ({ userRole = 'user' }) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [sending, setSending] = useState(false);
   
   // New chat dialog
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
@@ -127,9 +128,14 @@ const ChatInterface = ({ userRole = 'user' }) => {
       const response = await chatService.getChats();
       const loadedChats = response.data.chats || [];
       setChats(loadedChats);
+      // Auto-select first chat if none selected
+      if (!selectedChat && loadedChats.length > 0) {
+        setSelectedChat(loadedChats[0]);
+        loadMessages(loadedChats[0].id);
+      }
       return loadedChats; 
     } catch (err) {
-      setError('Failed to load chats');
+      setError(err?.response?.data?.error || 'Failed to load chats');
       console.error('Error loading chats:', err);
       return [];
     } finally {
@@ -141,9 +147,12 @@ const ChatInterface = ({ userRole = 'user' }) => {
     try {
       setLoading(true);
       const response = await chatService.getChatMessages(chatId);
-      setMessages(response.data.messages || []);
+      const msgs = response.data.messages || [];
+      // Ensure chronological order oldest -> newest for UI
+      const ordered = [...msgs].sort((a,b) => new Date(a.sentAt) - new Date(b.sentAt));
+      setMessages(ordered);
     } catch (err) {
-      setError('Failed to load messages');
+      setError(err?.response?.data?.error || 'Failed to load messages');
       console.error('Error loading messages:', err);
     } finally {
       setLoading(false);
@@ -156,16 +165,17 @@ const ChatInterface = ({ userRole = 'user' }) => {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedChat) return;
-
+    if (sending) return;
+    const content = newMessage.trim();
+    if (!content || !selectedChat) return;
+    setSending(true);
     try {
-      await chatService.sendMessage(selectedChat.id, newMessage.trim());
+      await chatService.sendMessage(selectedChat.id, content);
       setNewMessage('');
-      
       const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
       const optimisticMessage = {
         id: Date.now(),
-        content: newMessage.trim(),
+        content,
         sentAt: new Date().toISOString(),
         sender: {
           id: userProfile.id,
@@ -176,17 +186,17 @@ const ChatInterface = ({ userRole = 'user' }) => {
         },
       };
       setMessages(prev => [...prev, optimisticMessage]);
-      
       messageInputRef.current?.focus();
     } catch (err) {
-      setError('Failed to send message');
+      const msg = err?.response?.data?.error || err?.message || 'Failed to send message';
+      setError(msg);
       console.error('Error sending message:', err);
+    } finally {
+      setSending(false);
     }
   };
 
   const handleNewMessage = (messageData) => {
-    console.log('Received new message:', messageData);
-    
     // Update messages if this is for the currently selected chat
     if (selectedChat && messageData.chatId === selectedChat.id) {
       setMessages(prev => {
@@ -224,21 +234,13 @@ const ChatInterface = ({ userRole = 'user' }) => {
   };
 
   const handleCreateChat = async () => {
-    console.log('handleCreateChat called, selectedUsers:', selectedUsers);
-    
     if (selectedUsers.length === 0) {
-      console.log('No users selected, returning early');
       return;
     }
 
     try {
       const participantIds = selectedUsers.map(user => user.id);
-      console.log('Participant IDs:', participantIds);
-      console.log('Chat name:', chatName);
-      
-      console.log('Calling chatService.createChat...');
       const response = await chatService.createChat(participantIds, chatName || null);
-      console.log('Chat creation response:', response);
       
       setShowNewChatDialog(false);
       setSelectedUsers([]);
@@ -250,12 +252,7 @@ const ChatInterface = ({ userRole = 'user' }) => {
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Reload chats and select the new one
-        console.log('Reloading chats...');
         const updatedChats = await loadChats();
-        
-        console.log('Looking for new chat with ID:', response.data.chatId);
-        console.log('Available chats:', updatedChats.map(c => ({ id: c.id, name: c.displayName || c.chatName })));
-        
         let foundChat = updatedChats.find(chat => chat.id === response.data.chatId);
         
         if (!foundChat && participantIds.length === 1) {
@@ -264,27 +261,18 @@ const ChatInterface = ({ userRole = 'user' }) => {
           foundChat = updatedChats.find(chat => 
             chat.otherUser && chat.otherUser.id === otherUserId
           );
-          console.log('Searched by participant ID:', otherUserId, 'Found:', foundChat);
         }
         
         if (foundChat) {
-          console.log('Found chat, selecting it:', foundChat);
           handleChatSelect(foundChat);
         } else {
-          console.log('New chat not found in chats list, but creation was successful');
           // Force a reload in case of timing issues
-          setTimeout(() => {
-            console.log('Retrying chat load after delay...');
-            loadChats();
-          }, 1000);
+          setTimeout(() => loadChats(), 1000);
         }
-      } else {
-        console.log('No chatId in response data');
       }
     } catch (err) {
       setError('Failed to create chat');
       console.error('Error creating chat:', err);
-      console.error('Error details:', err.response?.data);
     }
   };
 
@@ -560,7 +548,7 @@ const ChatInterface = ({ userRole = 'user' }) => {
                       <InputAdornment position="end">
                         <IconButton
                           onClick={handleSendMessage}
-                          disabled={!newMessage.trim()}
+                          disabled={!newMessage.trim() || sending}
                           color="primary"
                         >
                           <SendIcon />

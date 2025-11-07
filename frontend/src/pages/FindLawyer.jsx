@@ -265,7 +265,6 @@ export default function FindLawyer() {
   const handleRequestLawyer = async (lawyerId) => {
     try {
       // This would typically open a modal for case details
-      console.log('Requesting lawyer:', lawyerId);
       // await userService.requestLawyer(lawyerId, caseData);
       alert('Lawyer request functionality will be implemented in the next phase.');
     } catch (err) {
