@@ -99,34 +99,77 @@ public class AIController {
 
             // Extract AI response
             Map<String, Object> responseBody = response.getBody();
-            if (responseBody != null && responseBody.containsKey("candidates")) {
+            
+            if (responseBody == null) {
+                log.error("Gemini API returned null response body");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Empty response from AI service"));
+            }
+            
+            log.info("Gemini API response received. Has candidates: {}", responseBody.containsKey("candidates"));
+            
+            if (responseBody.containsKey("candidates")) {
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
-                if (!candidates.isEmpty()) {
-                    Map<String, Object> candidate = candidates.get(0);
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> content = (Map<String, Object>) candidate.get("content");
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-                    if (!parts.isEmpty()) {
-                        String aiResponse = (String) parts.get(0).get("text");
-                        
-                        return ResponseEntity.ok(Map.of(
-                            "response", aiResponse,
-                            "sender", "ai",
-                            "model", geminiModel
-                        ));
+                
+                if (candidates == null || candidates.isEmpty()) {
+                    log.warn("Gemini returned empty candidates list");
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "AI returned no response candidates"));
+                }
+                
+                Map<String, Object> candidate = candidates.get(0);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> content = (Map<String, Object>) candidate.get("content");
+                
+                if (content == null) {
+                    log.warn("Candidate has no content field");
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "Invalid AI response structure"));
+                }
+                
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+                
+                if (parts != null && !parts.isEmpty()) {
+                    String aiResponse = (String) parts.get(0).get("text");
+                    
+                    if (aiResponse == null || aiResponse.isBlank()) {
+                        log.warn("AI response text is empty");
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(Map.of("error", "AI returned empty text"));
                     }
+                    
+                    log.info("AI response successfully extracted, length: {}", aiResponse.length());
+                    
+                    return ResponseEntity.ok(Map.of(
+                        "response", aiResponse,
+                        "sender", "ai",
+                        "model", geminiModel
+                    ));
                 }
             }
-
+            
+            // Log the full response for debugging
+            log.error("Unexpected Gemini API response structure: {}", responseBody);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Failed to get response from AI"));
+                .body(Map.of("error", "Failed to parse AI response - unexpected format"));
 
         } catch (Exception e) {
-            log.error("Error calling Gemini API: {}", e.getMessage(), e);
+            log.error("Error calling Gemini API: {} - {}", e.getClass().getSimpleName(), e.getMessage());
+            
+            // Return more specific error message
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && errorMsg.contains("API key")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid Gemini API key"));
+            } else if (errorMsg != null && errorMsg.contains("quota")) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "API quota exceeded - please try again later"));
+            }
+            
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "AI service error: " + e.getMessage()));
+                .body(Map.of("error", "AI service temporarily unavailable"));
         }
     }
 
@@ -141,5 +184,44 @@ public class AIController {
             "geminiConfigured", isConfigured,
             "model", geminiModel
         ));
+    }
+    
+    /**
+     * Test endpoint to verify Gemini integration
+     */
+    @GetMapping("/test")
+    public ResponseEntity<?> test() {
+        try {
+            if (geminiApiKey == null || geminiApiKey.isBlank()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of(
+                        "error", "Gemini API key not configured",
+                        "model", geminiModel,
+                        "keyPresent", false
+                    ));
+            }
+            
+            // Test with a simple question
+            String testMessage = "What is a lawyer?";
+            Map<String, Object> testRequest = Map.of("message", testMessage);
+            
+            log.info("Testing Gemini API with model: {}", geminiModel);
+            ResponseEntity<?> response = chat(testRequest);
+            
+            return ResponseEntity.ok(Map.of(
+                "status", "Test successful",
+                "model", geminiModel,
+                "keyPresent", true,
+                "testResponse", response.getBody()
+            ));
+            
+        } catch (Exception e) {
+            log.error("Test failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "error", "Test failed: " + e.getMessage(),
+                    "model", geminiModel
+                ));
+        }
     }
 }
