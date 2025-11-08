@@ -169,13 +169,15 @@ export const chatService = {
 
 // AI Services
 export const aiService = {
-  chatWithAI: (message) => api.post('/api/ai/chat', { message }),
-  checkHealth: () => api.get('/api/ai/health'),
-  
-  // Legacy methods (kept for backward compatibility)
-  askQuestion: (question, context = {}) => api.post('/api/ai/chat', { message: question, context }),
+  // For AI Assistant - uses Python AI model
+  askQuestion: (question, context = {}) => aiApi.post('/ask', { question, context }),
   getQuestionnaire: (caseType) => aiApi.get(`/questionnaire/${caseType}`),
   submitQuestionnaire: (answers) => aiApi.post('/questionnaire/submit', answers),
+  chatWithAI: (message, conversationId) => aiApi.post('/chat', { message, conversationId }),
+  
+  // For Chatbot - uses backend Gemini API
+  chatWithGemini: (message) => api.post('/api/ai/chat', { message }),
+  checkGeminiHealth: () => api.get('/api/ai/health'),
 };
 
 export default api;

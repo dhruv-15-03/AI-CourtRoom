@@ -9,8 +9,8 @@ export default function Chatbot() {
 
   const fetchGeminiResponse = async (userInput) => {
     try {
-      // Call backend AI service instead of calling Gemini directly
-      const response = await aiService.chatWithAI(userInput);
+      // Call backend Gemini service for Chatbot
+      const response = await aiService.chatWithGemini(userInput);
       return response.data.response || 'I\'m here to help with your legal questions!';
     } catch (err) {
       console.error('AI service error:', err);

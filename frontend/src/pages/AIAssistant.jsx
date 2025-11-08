@@ -66,7 +66,7 @@ export default function AIAssistant() {
       setLoading(true)
       
       try {
-        // Call backend AI service
+        // Call Python AI service (original implementation)
         const response = await aiService.chatWithAI(userMessage)
         
         // Add AI response to conversation
@@ -74,7 +74,7 @@ export default function AIAssistant() {
           ...prev,
           { 
             sender: "ai", 
-            text: response.data.response || "I'm here to help with your legal questions!",
+            text: response.data.response || response.data.answer || "I'm here to help with your legal questions!",
           },
         ])
       } catch (err) {
