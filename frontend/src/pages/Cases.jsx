@@ -69,24 +69,8 @@ const Cases = () => {
   const [selectedCase, setSelectedCase] = useState(null);
 
   useEffect(() => {
-    // Check authentication status
-    if (!isAuthenticated) {
-      console.warn('User not authenticated, redirecting to login...');
-      navigate('/login');
-      return;
-    }
-
-    // Validate JWT token exists
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      console.warn('No JWT token found, redirecting to login...');
-      logout();
-      navigate('/login');
-      return;
-    }
-
     loadCases();
-  }, [isAuthenticated, navigate, logout]);
+  }, []);
 
   const loadCases = async () => {
     try {

@@ -231,8 +231,13 @@ function AppContent() {
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </React.Suspense>
+        )}
           onClose={hideNotification}
           anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={6000}
         >
           <Alert onClose={hideNotification} severity={notification.severity}>
             {notification.message}
