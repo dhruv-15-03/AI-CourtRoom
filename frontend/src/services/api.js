@@ -102,6 +102,7 @@ export const userService = {
   requestLawyer: (lawyerId, caseData) => api.post(`/api/user/request-lawyer/${lawyerId}`, caseData),
   getCases: () => api.get('/api/user/cases'),
   getChats: () => api.get('/api/user/chats'),
+  decrementAttempts: () => api.post('/api/user/decrement-attempts'),
 };
 
 // Case Services - Comprehensive case management

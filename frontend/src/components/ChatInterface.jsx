@@ -58,6 +58,12 @@ const ChatInterface = ({ userRole = 'user' }) => {
   
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
+  const selectedChatRef = useRef(null);
+
+  // Update ref when selectedChat changes
+  useEffect(() => {
+    selectedChatRef.current = selectedChat;
+  }, [selectedChat]);
 
   // Helpers to compute safe display names
   const getUserName = (u) => {
@@ -170,11 +176,13 @@ const ChatInterface = ({ userRole = 'user' }) => {
     if (!content || !selectedChat) return;
     setSending(true);
     try {
-      await chatService.sendMessage(selectedChat.id, content);
+      const response = await chatService.sendMessage(selectedChat.id, content);
       setNewMessage('');
       const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-      const optimisticMessage = {
-        id: Date.now(),
+      
+      // Use the real ID from the server response
+      const newMessageObj = {
+        id: response.data.messageId,
         content,
         sentAt: new Date().toISOString(),
         sender: {
@@ -184,8 +192,15 @@ const ChatInterface = ({ userRole = 'user' }) => {
           image: userProfile.image,
           isCurrentUser: true,
         },
+        chatId: selectedChat.id
       };
-      setMessages(prev => [...prev, optimisticMessage]);
+      
+      setMessages(prev => {
+        // Check if message was already added via WebSocket
+        if (prev.some(msg => msg.id === newMessageObj.id)) return prev;
+        return [...prev, newMessageObj];
+      });
+      
       messageInputRef.current?.focus();
     } catch (err) {
       const msg = err?.response?.data?.error || err?.message || 'Failed to send message';
@@ -198,7 +213,8 @@ const ChatInterface = ({ userRole = 'user' }) => {
 
   const handleNewMessage = (messageData) => {
     // Update messages if this is for the currently selected chat
-    if (selectedChat && messageData.chatId === selectedChat.id) {
+    const currentChat = selectedChatRef.current;
+    if (currentChat && messageData.chatId === currentChat.id) {
       setMessages(prev => {
         const exists = prev.some(msg => msg.id === messageData.id);
         if (exists) return prev;

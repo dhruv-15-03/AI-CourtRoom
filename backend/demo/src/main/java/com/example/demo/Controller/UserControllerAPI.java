@@ -68,6 +68,13 @@ public class UserControllerAPI {
             userDto.put("successRate", user.getSuccessRate());
             userDto.put("averageRating", user.getAverageRating());
             
+            // Handle null freeTrialAttempts for existing users
+            if (user.getFreeTrialAttempts() == null) {
+                user.setFreeTrialAttempts(3);
+                userRepository.save(user);
+            }
+            userDto.put("freeTrialAttempts", user.getFreeTrialAttempts());
+            
             return ResponseEntity.ok(userDto);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid token: " + e.getMessage()));
@@ -318,6 +325,32 @@ public class UserControllerAPI {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
-    
-    
+
+    @PostMapping("/decrement-attempts")
+    public ResponseEntity<?> decrementAttempts(@RequestHeader("Authorization") String jwt) {
+        try {
+            String email = JwtProvider.getEmailFromJwt(jwt);
+            User user = userRepository.searchByEmail(email);
+            
+            if (user == null) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            if (user.getFreeTrialAttempts() == null) {
+                user.setFreeTrialAttempts(3);
+                userRepository.save(user);
+            }
+            
+            if (user.getFreeTrialAttempts() > 0) {
+                user.setFreeTrialAttempts(user.getFreeTrialAttempts() - 1);
+                userRepository.save(user);
+                return ResponseEntity.ok(Map.of("success", true, "attemptsLeft", user.getFreeTrialAttempts()));
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("error", "No free trial attempts left"));
+            }
+            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

@@ -136,6 +136,7 @@ public class User {
     private Boolean isActive;
     private Boolean isVerified;
     private LocalDateTime lastLogin;
+    private Integer freeTrialAttempts;
     
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -151,6 +152,7 @@ public class User {
         casesWon = 0;
         successRate = 0.0;
         averageRating = 0.0;
+        freeTrialAttempts = 3;
     }
     
     @PreUpdate
