@@ -23,6 +23,9 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
+
+    @Version
+    private Long version;
     
     // Basic Information
     private Long mobile;

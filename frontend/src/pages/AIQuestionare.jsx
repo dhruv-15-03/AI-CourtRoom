@@ -85,7 +85,7 @@ const DynamicQuestionnaire = () => {
     if (currentStep === 0 && questions[0]?.id === "case_type") {
       return
     }
-    console.log(answers)
+    
     if (currentStep < questions.length - 1) {
       setCurrentStep(currentStep + 1)
     } else {

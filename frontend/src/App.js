@@ -9,30 +9,32 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // User Components
 import Sidebar from './components/Sidebar';
-import FindLawyer from './pages/FindLawyer';
-import AIAssistant from './pages/AIAssistant';
-import AIQuestionare from './pages/AIQuestionare.jsx'
-import Chatbot from './pages/Chatbot';
-import ChatPage from './pages/ChatPage';
-import ProfilePage from './pages/ProfilePage';
+
+// Lazy load pages for performance optimization
+const FindLawyer = React.lazy(() => import('./pages/FindLawyer'));
+const AIAssistant = React.lazy(() => import('./pages/AIAssistant'));
+const AIQuestionare = React.lazy(() => import('./pages/AIQuestionare.jsx'));
+const Chatbot = React.lazy(() => import('./pages/Chatbot'));
+const ChatPage = React.lazy(() => import('./pages/ChatPage'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
 
 // Lawyer Routes
-import LawyerRoutes from './routes/LawyerRoutes';
+const LawyerRoutes = React.lazy(() => import('./routes/LawyerRoutes'));
 
 // Judge Components
 import JudgeLayout from './components/JudgeLayout';
-import JudgeDashboard from './pages/judge/JudgeDashboard.jsx';
-import PendingCases from './pages/judge/PendingCases.jsx';
-import JudgeCaseDetails from './pages/judge/CaseDetails.jsx';
-import Judgments from './pages/judge/Judgments.jsx';
-import JudgeProfile from './pages/judge/JudgeProfile.jsx';
-import JudgeChats from './pages/judge/Chats.jsx';
+const JudgeDashboard = React.lazy(() => import('./pages/judge/JudgeDashboard.jsx'));
+const PendingCases = React.lazy(() => import('./pages/judge/PendingCases.jsx'));
+const JudgeCaseDetails = React.lazy(() => import('./pages/judge/CaseDetails.jsx'));
+const Judgments = React.lazy(() => import('./pages/judge/Judgments.jsx'));
+const JudgeProfile = React.lazy(() => import('./pages/judge/JudgeProfile.jsx'));
+const JudgeChats = React.lazy(() => import('./pages/judge/Chats.jsx'));
 
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import Cases from './pages/Cases.jsx';
-import CreateCase from './pages/CreateCase.jsx';
-import CaseDetails from './pages/CaseDetails.jsx';
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
+const Cases = React.lazy(() => import('./pages/Cases.jsx'));
+const CreateCase = React.lazy(() => import('./pages/CreateCase.jsx'));
+const CaseDetails = React.lazy(() => import('./pages/CaseDetails.jsx'));
 
 // Common Components
 import { FullScreenLoader } from './components/common/UIComponents';
@@ -172,65 +174,63 @@ function AppContent() {
               minHeight: '100vh',
               backgroundColor: theme.palette.background.default 
             }}>
-              <Routes>
-                {/* User Routes */}
-                {userRole === 'user' && (
-                  <>
-        <Route path="/home" element={<FindLawyer />} />
-                    <Route path="/ai-assistant" element={<AIAssistant />} />
-                    <Route path="/chatbot" element={<Chatbot />} />
-                    <Route path="/cases" element={<Cases />} />
-                    <Route path="/cases/create" element={<CreateCase />} />
-                    <Route path="/cases/:id" element={<CaseDetails />} />
-                    <Route path="/my-profile" element={<ProfilePage />} />
-                    <Route path="/chats" element={<ChatPage />} />
-                    <Route path="/ai-chat" element={<AIQuestionare />} />
-        <Route path="*" element={<Navigate to="/home" replace />} />
-                  </>
-                )}
+              <React.Suspense fallback={<FullScreenLoader message="Loading page..." />}>
+                <Routes>
+                  {/* User Routes */}
+                  {userRole === 'user' && (
+                    <>
+          <Route path="/home" element={<FindLawyer />} />
+                      <Route path="/ai-assistant" element={<AIAssistant />} />
+                      <Route path="/chatbot" element={<Chatbot />} />
+                      <Route path="/cases" element={<Cases />} />
+                      <Route path="/cases/create" element={<CreateCase />} />
+                      <Route path="/cases/:id" element={<CaseDetails />} />
+                      <Route path="/my-profile" element={<ProfilePage />} />
+                      <Route path="/chats" element={<ChatPage />} />
+                      <Route path="/ai-chat" element={<AIQuestionare />} />
+          <Route path="*" element={<Navigate to="/home" replace />} />
+                    </>
+                  )}
 
-                {/* Lawyer Routes */}
-                {userRole === 'lawyer' && (
-                  <Route path="/lawyer/*" element={<LawyerRoutes mode={mode} setMode={setMode} />} />
-                )}
+                  {/* Lawyer Routes */}
+                  {userRole === 'lawyer' && (
+                    <Route path="/lawyer/*" element={<LawyerRoutes mode={mode} setMode={setMode} />} />
+                  )}
 
-                {/* Judge Routes */}
-                {userRole === 'judge' && (
-                  <Route path="/judge/*" element={<JudgeLayout mode={mode} setMode={setMode} />}>                    
-                    <Route index element={<Navigate to="dashboard" replace />} />
-                    <Route path="dashboard" element={<JudgeDashboard />} />
-                    <Route path="chats" element={<JudgeChats />} />
-                    <Route path="pending-cases" element={<PendingCases />} />
-                    <Route path="case-details/:id" element={<JudgeCaseDetails />} />
-                    <Route path="judgments" element={<Judgments />} />
-                    <Route path="profile" element={<JudgeProfile />} />
-                    <Route path="*" element={<Navigate to="dashboard" replace />} />
-                  </Route>
-                )}
+                  {/* Judge Routes */}
+                  {userRole === 'judge' && (
+                    <Route path="/judge/*" element={<JudgeLayout mode={mode} setMode={setMode} />}>                    
+                      <Route index element={<Navigate to="dashboard" replace />} />
+                      <Route path="dashboard" element={<JudgeDashboard />} />
+                      <Route path="chats" element={<JudgeChats />} />
+                      <Route path="pending-cases" element={<PendingCases />} />
+                      <Route path="case-details/:id" element={<JudgeCaseDetails />} />
+                      <Route path="judgments" element={<Judgments />} />
+                      <Route path="profile" element={<JudgeProfile />} />
+                      <Route path="*" element={<Navigate to="dashboard" replace />} />
+                    </Route>
+                  )}
 
-                {/* Redirect based on role for any unmatched route */}
-                <Route path="*" element={
-                  <Navigate to={
-                    userRole === 'lawyer' ? '/lawyer/dashboard' :
-                    userRole === 'judge' ? '/judge/dashboard' : '/home'
-                  } replace />
-                } />
-              </Routes>
+                  {/* Redirect based on role for any unmatched route */}
+                  <Route path="*" element={
+                    <Navigate to={
+                      userRole === 'lawyer' ? '/lawyer/dashboard' :
+                      userRole === 'judge' ? '/judge/dashboard' : '/home'
+                    } replace />
+                  } />
+                </Routes>
+              </React.Suspense>
             </div>
           </>
         ) : (
-          <Routes>
-            <Route path="/" element={<LandingRedirect />} />
-            <Route path="/login" element={<LoginPage showNotification={showNotification} />} />
-            <Route path="/register" element={<RegisterPage showNotification={showNotification} />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        )}
-
-        {/* Global Notification Snackbar */}
-        <Snackbar
-          open={notification.open}
-          autoHideDuration={5000}
+          <React.Suspense fallback={<FullScreenLoader message="Loading..." />}>
+            <Routes>
+              <Route path="/" element={<LandingRedirect />} />
+              <Route path="/login" element={<LoginPage showNotification={showNotification} />} />
+              <Route path="/register" element={<RegisterPage showNotification={showNotification} />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </React.Suspense>
           onClose={hideNotification}
           anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
