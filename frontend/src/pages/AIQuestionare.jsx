@@ -24,7 +24,8 @@ import {
 } from "@mui/material"
 import { Gavel, Assessment, CheckCircle, ArrowForward, ArrowBack, RestartAlt } from "@mui/icons-material"
 
-const API_URL = "https://ai-court-ai.onrender.com/api"
+// Use environment variable with fallback
+const API_URL = process.env.REACT_APP_AI_API_URL || "https://ai-court-ai.onrender.com/api"
 
 const DynamicQuestionnaire = () => {
   const theme = useTheme()

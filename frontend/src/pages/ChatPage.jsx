@@ -4,7 +4,8 @@ import ChatInterface from '../components/ChatInterface';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function ChatPage() {
-  const { userRole } = useAuth();
+  const { user } = useAuth();
+  const userRole = user?.role || 'user';
 
   return (
     <Box sx={{ height: '100%', p: 2 }}>

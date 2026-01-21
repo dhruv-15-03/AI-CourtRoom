@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useState, useCallback } from 'react';
 import { Box, AppBar, Toolbar, IconButton, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { Outlet } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -6,12 +6,12 @@ import LawyerSidebar from './LawyerSidebar';
 
 const drawerWidth = 280;
 
-export default function LawyerLayout({ mode, setMode, children }) {
+const LawyerLayout = memo(function LawyerLayout({ mode, setMode, children }) {
   const theme = useTheme();
   const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
-  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleDrawerToggle = () => setMobileOpen((prev) => !prev);
+  const handleDrawerToggle = useCallback(() => setMobileOpen((prev) => !prev), []);
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -77,4 +77,6 @@ export default function LawyerLayout({ mode, setMode, children }) {
       </Box>
     </Box>
   );
-}
+});
+
+export default LawyerLayout;

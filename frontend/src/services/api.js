@@ -1,10 +1,14 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL ;
-const AI_API_URL = process.env.REACT_APP_AI_API_URL ;
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
+const AI_API_URL = process.env.REACT_APP_AI_API_URL || 'https://ai-court-ai.onrender.com/api';
+
+// Default timeout for requests (30 seconds)
+const DEFAULT_TIMEOUT = 30000;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: DEFAULT_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,6 +16,7 @@ const api = axios.create({
 
 const aiApi = axios.create({
   baseURL: AI_API_URL,
+  timeout: 60000, // AI requests may take longer
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,8 +24,6 @@ const aiApi = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    config.headers['Content-Type'] = 'application/json';
-    
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

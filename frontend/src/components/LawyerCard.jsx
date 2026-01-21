@@ -1,7 +1,8 @@
+import React, { memo } from 'react';
 import { Card, CardContent, Typography, Avatar, Button, Box, Chip } from '@mui/material';
 import { Email, Phone, Star } from '@mui/icons-material';
 
-export default function LawyerCard({ lawyer, onRequest, onChat }) {
+const LawyerCard = memo(function LawyerCard({ lawyer, onRequest, onChat }) {
   const displayName = lawyer.name || `${lawyer.firstName} ${lawyer.lastName}`;
   const specialization = lawyer.specialization || lawyer.specialisation;
   
@@ -111,4 +112,6 @@ export default function LawyerCard({ lawyer, onRequest, onChat }) {
       </Box>
     </Card>
   );
-}
+});
+
+export default LawyerCard;

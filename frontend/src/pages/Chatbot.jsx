@@ -1,13 +1,19 @@
-import { useState } from 'react';
-import { Box, TextField, Typography, List, ListItem, Card } from '@mui/material';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { Box, TextField, Typography, List, ListItem, Card, CircularProgress } from '@mui/material';
 import { aiService } from '../services/api';
 
 export default function Chatbot() {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  const fetchGeminiResponse = async (userInput) => {
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const fetchGeminiResponse = useCallback(async (userInput) => {
     try {
       // Call backend Gemini service for Chatbot
       const response = await aiService.chatWithGemini(userInput);
@@ -17,27 +23,31 @@ export default function Chatbot() {
       const errorMessage = err?.response?.data?.error || err?.message || 'Failed to get AI response';
       return `⚠️ ${errorMessage}`;
     }
-  };
+  }, []);
 
-  const handleSend = async (e) => {
-    if (e.key === 'Enter' && text && !loading) {
-      const userMsg = { text, sender: 'user' };
+  const handleSend = useCallback(async (e) => {
+    if (e.key === 'Enter' && text.trim() && !loading) {
+      const userInput = text.trim();
+      const userMsg = { text: userInput, sender: 'user', id: Date.now() };
       setMessages((prev) => [...prev, userMsg]);
       setText('');
       setLoading(true);
 
-      const botReply = await fetchGeminiResponse(text);
-      const botMsg = { text: botReply, sender: 'bot' };
+      const botReply = await fetchGeminiResponse(userInput);
+      const botMsg = { text: botReply, sender: 'bot', id: Date.now() + 1 };
 
       setMessages((prev) => [...prev, botMsg]);
       setLoading(false);
     }
-  };
+  }, [text, loading, fetchGeminiResponse]);
+
+  const handleTextChange = useCallback((e) => {
+    setText(e.target.value);
+  }, []);
 
   return (
     <Box
       sx={{
-        // ml: '240px', 
         p: 2,
         height: '100vh',
         boxSizing: 'border-box',
@@ -45,7 +55,16 @@ export default function Chatbot() {
       }}
     >
       <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-        <Typography variant="h6" sx={{ p: 2, borderBottom: '1px solid #ddd',alignItems:"center",alignContent:"center",justifyItems:"center",justifyContent:"center" }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            p: 2, 
+            borderBottom: '1px solid #ddd',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
           Legal Chatbot
         </Typography>
 
@@ -57,9 +76,9 @@ export default function Chatbot() {
             py: 1,
           }}
         >
-          {messages.map((msg, i) => (
+          {messages.map((msg) => (
             <ListItem
-              key={i}
+              key={msg.id}
               sx={{ justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}
             >
               <Box
@@ -69,12 +88,24 @@ export default function Chatbot() {
                   p: 1.5,
                   borderRadius: 2,
                   maxWidth: '75%',
+                  wordBreak: 'break-word',
                 }}
               >
                 {msg.text}
               </Box>
             </ListItem>
           ))}
+          {loading && (
+            <ListItem sx={{ justifyContent: 'flex-start' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1.5 }}>
+                <CircularProgress size={20} />
+                <Typography variant="body2" color="text.secondary">
+                  Thinking...
+                </Typography>
+              </Box>
+            </ListItem>
+          )}
+          <div ref={messagesEndRef} />
         </List>
 
         <Box
@@ -91,9 +122,10 @@ export default function Chatbot() {
             fullWidth
             placeholder={loading ? 'Waiting for response...' : 'Type your legal question...'}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={handleTextChange}
             onKeyDown={handleSend}
             disabled={loading}
+            autoComplete="off"
           />
         </Box>
       </Card>

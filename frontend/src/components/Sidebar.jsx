@@ -1,5 +1,6 @@
 "use client"
 
+import React, { memo, useMemo, useCallback } from "react"
 import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider } from "@mui/material"
 import GavelIcon from "@mui/icons-material/Gavel"
 import SmartToyIcon from "@mui/icons-material/SmartToy"
@@ -10,18 +11,26 @@ import CaseIcon from "@mui/icons-material/FolderOpen"
 import Brightness4Icon from "@mui/icons-material/Brightness4"
 import { useNavigate, useLocation } from "react-router-dom"
 
-export default function Sidebar({ mode, setMode }) {
+const Sidebar = memo(function Sidebar({ mode, setMode }) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const menuItems = [
+  const menuItems = useMemo(() => [
     { path: "/home", label: "Find a Lawyer", icon: <GavelIcon /> },
     { path: "/ai-assistant", label: "AI Assistant", icon: <SmartToyIcon /> },
     { path: "/chatbot", label: "Legal Chatbot", icon: <ForumIcon /> },
     { path: "/cases", label: "Cases", icon: <CaseIcon /> },
     { path: "/my-profile", label: "My Profile", icon: <AccountCircleIcon /> },
     { path: "/chats", label: "Chats", icon: <ChatIcon /> },
-  ]
+  ], [])
+
+  const toggleMode = useCallback(() => {
+    setMode(mode === "light" ? "dark" : "light")
+  }, [mode, setMode])
+
+  const handleNavigation = useCallback((path) => () => {
+    navigate(path)
+  }, [navigate])
 
   return (
     <Drawer
@@ -108,10 +117,10 @@ export default function Sidebar({ mode, setMode }) {
       </Box>
 
       <List sx={{ pt: 1, px: 2, position: "relative", zIndex: 1 }}>
-        {menuItems.map((item, index) => (
+        {menuItems.map((item) => (
           <ListItemButton
             key={item.path}
-            onClick={() => navigate(item.path)}
+            onClick={handleNavigation(item.path)}
             selected={location.pathname === item.path}
             sx={{
               mb: 1.5,
@@ -215,7 +224,7 @@ export default function Sidebar({ mode, setMode }) {
         />
 
         <ListItemButton
-          onClick={() => setMode(mode === "light" ? "dark" : "light")}
+          onClick={toggleMode}
           sx={{
             borderRadius: 3,
             minHeight: 56,
@@ -294,4 +303,6 @@ export default function Sidebar({ mode, setMode }) {
       </Box>
     </Drawer>
   )
-}
+})
+
+export default Sidebar

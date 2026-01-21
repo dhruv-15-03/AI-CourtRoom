@@ -10,6 +10,10 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 // User Components
 import Sidebar from './components/Sidebar';
 
+// Common Components
+import { FullScreenLoader } from './components/common/UIComponents';
+import ErrorBoundary from './components/common/ErrorBoundary';
+
 // Lazy load pages for performance optimization
 const FindLawyer = React.lazy(() => import('./pages/FindLawyer'));
 const AIAssistant = React.lazy(() => import('./pages/AIAssistant'));
@@ -35,9 +39,6 @@ const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
 const Cases = React.lazy(() => import('./pages/Cases.jsx'));
 const CreateCase = React.lazy(() => import('./pages/CreateCase.jsx'));
 const CaseDetails = React.lazy(() => import('./pages/CaseDetails.jsx'));
-
-// Common Components
-import { FullScreenLoader } from './components/common/UIComponents';
 
 function AppContent() {
   const [mode, setMode] = useState(localStorage.getItem('theme') || 'light');
@@ -232,12 +233,12 @@ function AppContent() {
             </Routes>
           </React.Suspense>
         )}
-          onClose={hideNotification}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         
         <Snackbar
           open={notification.open}
           autoHideDuration={6000}
+          onClose={hideNotification}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
           <Alert onClose={hideNotification} severity={notification.severity}>
             {notification.message}
@@ -250,8 +251,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
