@@ -15,7 +15,7 @@ import java.util.*;
 @Slf4j
 @RestController
 @RequestMapping("/api/ai")
-@CrossOrigin(origins = {"http://localhost:3000", "https://ai-court-room.vercel.app"})
+@CrossOrigin(origins = {"http://localhost:3000", "https://ai-court-room-iota.vercel.app", "https://ai-courtroom.vercel.app"})
 public class AIController {
 
     @Value("${gemini.api.key:}")

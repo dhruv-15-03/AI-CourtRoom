@@ -20,7 +20,7 @@ import com.example.demo.Config.JwtProvider;
 
 @RestController
 @RequestMapping("/api/cases")
-@CrossOrigin(origins = {"http://localhost:3000", "https://ai-court-room.vercel.app"})
+@CrossOrigin(origins = {"http://localhost:3000", "https://ai-court-room-iota.vercel.app", "https://ai-courtroom.vercel.app"})
 public class CaseController {
     
     @Autowired
