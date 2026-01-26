@@ -171,17 +171,172 @@ export const chatService = {
   getMessages: (chatId) => api.get(`/api/chat/${chatId}/messages`),
 };
 
-// AI Services
+// AI Court API Services - Comprehensive Legal Case Prediction
 export const aiService = {
-  // For AI Assistant - uses Python AI model
+  // ============== Core Analysis Endpoints ==============
+  
+  /**
+   * Primary case analysis with full details
+   * Rate Limit: 30/minute
+   */
+  analyzeCase: (caseData) => aiApi.post('/analyze', caseData),
+  
+  /**
+   * Quick analysis for high-throughput scenarios
+   * Rate Limit: 60/minute
+   */
+  analyzeQuick: (text, caseType = null) => aiApi.post('/analyze/quick', { 
+    text, 
+    ...(caseType && { case_type: caseType }) 
+  }),
+  
+  /**
+   * Batch analysis - process multiple cases (up to 50)
+   * Rate Limit: 10/minute
+   * @param {Array} cases - Array of case objects
+   * @param {string} format - 'minimal' | 'full' | 'detailed'
+   */
+  analyzeBatch: (cases, format = 'full') => aiApi.post('/analyze/batch', { cases, format }),
+  
+  /**
+   * Combined prediction + similar case retrieval
+   * Rate Limit: 20/minute
+   */
+  analyzeAndSearch: (caseData) => aiApi.post('/analyze_and_search', caseData),
+  
+  // ============== RAG (Retrieval-Augmented Generation) ==============
+  
+  /**
+   * Semantic search over case database with precedent retrieval
+   * Rate Limit: 30/minute
+   * @param {string} question - Natural language query
+   * @param {number} k - Number of similar cases to retrieve (max 10)
+   */
+  ragQuery: (question, k = 5) => aiApi.post('/rag/query', { question, k }),
+  
+  // ============== Questions & Reference Endpoints ==============
+  
+  /**
+   * Get initial case type selection questions
+   */
+  getInitialQuestions: () => aiApi.get('/questions/initial'),
+  
+  /**
+   * Get questions for a specific case type
+   * @param {string} caseType - 'Criminal' | 'Civil' | 'Labor' | 'Family'
+   */
+  getQuestionsByType: (caseType) => aiApi.get(`/questions/${caseType}`),
+  
+  /**
+   * Get all case type categories and their input fields
+   */
+  getAllQuestions: () => aiApi.get('/questions'),
+  
+  /**
+   * Get all possible prediction outcomes with descriptions
+   */
+  getOutcomes: () => aiApi.get('/outcomes'),
+  
+  /**
+   * Get details for a specific outcome
+   * @param {string} outcome - e.g., 'Bail Granted', 'Conviction'
+   */
+  getOutcomeDetails: (outcome) => aiApi.get(`/outcomes/${encodeURIComponent(outcome)}`),
+  
+  // ============== Monitoring & Health ==============
+  
+  /**
+   * Health check and model status
+   */
+  checkHealth: () => aiApi.get('/health'),
+  
+  /**
+   * Model metadata, version, and classes
+   */
+  getModelInfo: () => aiApi.get('/model/info'),
+  
+  /**
+   * Model precision, recall, F1 scores
+   */
+  getModelMetrics: () => aiApi.get('/model/metrics'),
+  
+  /**
+   * Data drift detection stats
+   */
+  getDriftStats: () => aiApi.get('/drift'),
+  
+  // ============== Backend Gemini API (for general chatbot) ==============
+  
+  chatWithGemini: (message) => api.post('/api/ai/chat', { message }),
+  checkGeminiHealth: () => api.get('/api/ai/health'),
+  
+  // ============== Legacy endpoints (backward compatibility) ==============
+  
   askQuestion: (question, context = {}) => aiApi.post('/ask', { question, context }),
   getQuestionnaire: (caseType) => aiApi.get(`/questionnaire/${caseType}`),
   submitQuestionnaire: (answers) => aiApi.post('/questionnaire/submit', answers),
   chatWithAI: (message, conversationId) => aiApi.post('/chat', { message, conversationId }),
-  
-  // For Chatbot - uses backend Gemini API
-  chatWithGemini: (message) => api.post('/api/ai/chat', { message }),
-  checkGeminiHealth: () => api.get('/api/ai/health'),
 };
+
+// ============== Confidence Level Helpers ==============
+
+/**
+ * Get confidence display information based on score
+ * @param {number} confidence - Confidence score (0-1)
+ * @returns {Object} { level, color, icon, message }
+ */
+export const getConfidenceDisplay = (confidence) => {
+  if (confidence >= 0.90) return { 
+    level: 'Very High', 
+    color: '#22c55e', 
+    icon: '✅',
+    message: 'Reliable for decision support'
+  };
+  if (confidence >= 0.75) return { 
+    level: 'High', 
+    color: '#84cc16', 
+    icon: '🟢',
+    message: 'Can be used with reasonable assurance'
+  };
+  if (confidence >= 0.60) return { 
+    level: 'Moderate', 
+    color: '#eab308', 
+    icon: '🟡',
+    message: 'Review with additional context'
+  };
+  if (confidence >= 0.40) return { 
+    level: 'Low', 
+    color: '#f97316', 
+    icon: '🟠',
+    message: 'Expert review strongly recommended'
+  };
+  return { 
+    level: 'Very Low', 
+    color: '#ef4444', 
+    icon: '🔴',
+    message: 'Do not rely without verification'
+  };
+};
+
+/**
+ * All possible prediction outcomes
+ */
+export const PREDICTION_OUTCOMES = [
+  'Bail Granted',
+  'Bail Denied', 
+  'Conviction',
+  'Acquittal',
+  'Charges Quashed',
+  'Compensation Awarded',
+  'Petition Dismissed',
+  'Injunction Granted',
+  'Maintenance Ordered',
+  'Other'
+];
+
+/**
+ * Case types supported by the API
+ */
+export const CASE_TYPES = ['Criminal', 'Civil', 'Labor', 'Family'];
 
 export default api;

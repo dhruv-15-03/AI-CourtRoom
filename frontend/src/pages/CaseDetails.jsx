@@ -21,6 +21,9 @@ import {
   ListItem,
   ListItemText,
   IconButton,
+  LinearProgress,
+  Tooltip,
+  Collapse,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -34,9 +37,17 @@ import {
   Save,
   Cancel,
   Add,
+  Psychology,
+  TrendingUp,
+  TrendingDown,
+  ExpandMore,
+  ExpandLess,
+  Search,
+  Info,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { caseService } from '../services/api';
+import { caseService, getConfidenceDisplay } from '../services/api';
+import { useAIAnalysis } from '../hooks/useAIAnalysis';
 
 const CaseDetails = () => {
   const { id } = useParams();
@@ -49,6 +60,15 @@ const CaseDetails = () => {
   const [saving, setSaving] = useState(false);
   const [judgementDialog, setJudgementDialog] = useState(false);
   const [newJudgement, setNewJudgement] = useState('');
+  
+  // AI Analysis States
+  const [aiPrediction, setAiPrediction] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [similarCases, setSimilarCases] = useState([]);
+  const [showAiSection, setShowAiSection] = useState(false);
+  
+  const { analyzeAndSearch, searchPrecedents, outcomeDescriptions } = useAIAnalysis();
   
   const [editForm, setEditForm] = useState({
     description: '',
@@ -133,6 +153,73 @@ const CaseDetails = () => {
       setError(err.response?.data?.error || err.message || 'Failed to reopen case');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // AI Analysis Function
+  const handleAIAnalysis = async () => {
+    if (!caseData) return;
+    
+    setAiLoading(true);
+    setAiError(null);
+    setShowAiSection(true);
+    
+    try {
+      // Map case data to AI API format
+      const caseTypeMapping = {
+        'CRIMINAL': 'Criminal',
+        'CIVIL': 'Civil',
+        'FAMILY': 'Family',
+        'LABOUR': 'Labor',
+        'LABOR': 'Labor',
+        'CONSUMER': 'Civil',
+        'CONSTITUTIONAL': 'Civil',
+      };
+      
+      const analysisData = {
+        case_type: caseTypeMapping[caseData.caseType?.toUpperCase()] || 'Criminal',
+        parties: `${caseData.petitioner || 'Petitioner'} vs ${caseData.respondent || 'Respondent'}`,
+        description: caseData.description || '',
+      };
+
+      // Add additional fields based on case type
+      if (caseData.caseType?.toUpperCase() === 'CRIMINAL') {
+        analysisData.violence_level = 'Unknown';
+        analysisData.weapon = 'Unknown';
+        analysisData.police_report = caseData.policeReport ? 'Yes' : 'Unknown';
+        analysisData.witnesses = caseData.witnesses?.length > 1 ? 'Multiple' : caseData.witnesses?.length === 1 ? 'Single' : 'Unknown';
+        analysisData.premeditation = 'Unknown';
+      }
+
+      const result = await analyzeAndSearch(analysisData);
+      setAiPrediction(result);
+      setSimilarCases(result.similar || []);
+    } catch (err) {
+      console.error('AI Analysis error:', err);
+      setAiError(err.message || 'Failed to analyze case');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Search for similar precedents
+  const handleSearchPrecedents = async () => {
+    if (!caseData?.description) {
+      setAiError('No case description available for search');
+      return;
+    }
+    
+    setAiLoading(true);
+    setAiError(null);
+    
+    try {
+      const result = await searchPrecedents(caseData.description, 5);
+      setSimilarCases(result.documents || []);
+    } catch (err) {
+      console.error('Precedent search error:', err);
+      setAiError(err.message || 'Failed to search precedents');
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -221,6 +308,21 @@ const CaseDetails = () => {
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              startIcon={aiLoading ? <CircularProgress size={16} color="inherit" /> : <Psychology />}
+              onClick={handleAIAnalysis}
+              disabled={aiLoading}
+              variant="contained"
+              sx={{
+                backgroundColor: '#d97706',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: '#b45309',
+                },
+              }}
+            >
+              AI Prediction
+            </Button>
             {!editing && (
               <Button
                 startIcon={<Edit />}
@@ -459,6 +561,259 @@ const CaseDetails = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* AI Analysis Section */}
+      <Collapse in={showAiSection}>
+        <Paper 
+          elevation={2} 
+          sx={{ 
+            p: 4, 
+            mt: 4, 
+            borderRadius: 3,
+            border: '2px solid #d97706',
+            background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.05) 0%, rgba(245, 158, 11, 0.05) 100%)',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Psychology sx={{ color: '#d97706', fontSize: 32 }} />
+              <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#d97706' }}>
+                AI Case Analysis
+              </Typography>
+            </Box>
+            <IconButton onClick={() => setShowAiSection(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          {/* AI Error */}
+          {aiError && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {aiError}
+            </Alert>
+          )}
+
+          {/* Loading State */}
+          {aiLoading && (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <CircularProgress sx={{ color: '#d97706', mb: 2 }} />
+              <Typography variant="body1" color="text.secondary">
+                Analyzing case with AI...
+              </Typography>
+            </Box>
+          )}
+
+          {/* AI Prediction Results */}
+          {aiPrediction && !aiLoading && (
+            <Grid container spacing={3}>
+              {/* Predicted Judgment */}
+              <Grid item xs={12} md={6}>
+                <Card sx={{ height: '100%', borderRadius: 2 }}>
+                  <CardContent>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Predicted Judgment
+                    </Typography>
+                    <Chip
+                      label={aiPrediction.judgment}
+                      sx={{
+                        backgroundColor: '#d97706',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        height: 36,
+                        mb: 2,
+                      }}
+                    />
+                    {aiPrediction.needs_review && (
+                      <Alert severity="warning" sx={{ mt: 2 }}>
+                        This prediction has low confidence. Expert review recommended.
+                      </Alert>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              {/* Confidence Score */}
+              <Grid item xs={12} md={6}>
+                <Card sx={{ height: '100%', borderRadius: 2 }}>
+                  <CardContent>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Confidence Score
+                    </Typography>
+                    {(() => {
+                      const conf = getConfidenceDisplay(aiPrediction.confidence || 0);
+                      return (
+                        <>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <Typography sx={{ fontSize: '1.5rem' }}>{conf.icon}</Typography>
+                            <Chip
+                              label={conf.level}
+                              sx={{
+                                backgroundColor: conf.color,
+                                color: 'white',
+                                fontWeight: 'bold',
+                              }}
+                            />
+                            <Typography variant="h5" sx={{ fontWeight: 'bold', color: conf.color, ml: 'auto' }}>
+                              {((aiPrediction.confidence || 0) * 100).toFixed(1)}%
+                            </Typography>
+                          </Box>
+                          <LinearProgress
+                            variant="determinate"
+                            value={(aiPrediction.confidence || 0) * 100}
+                            sx={{
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: 'rgba(0,0,0,0.1)',
+                              '& .MuiLinearProgress-bar': {
+                                backgroundColor: conf.color,
+                                borderRadius: 4,
+                              },
+                            }}
+                          />
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            {conf.message}
+                          </Typography>
+                        </>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              {/* Key Factors */}
+              {aiPrediction.key_factors && aiPrediction.key_factors.length > 0 && (
+                <Grid item xs={12}>
+                  <Card sx={{ borderRadius: 2 }}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                        <Info sx={{ color: '#1e3a8a' }} />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#1e3a8a' }}>
+                          Key Factors Influencing Prediction
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {aiPrediction.key_factors.map((factor, index) => (
+                          <Chip
+                            key={index}
+                            icon={factor.direction === 'positive' ? <TrendingUp /> : <TrendingDown />}
+                            label={`${factor.feature} (${Math.round(factor.importance * 100)}%)`}
+                            sx={{
+                              backgroundColor: factor.direction === 'positive' 
+                                ? 'rgba(34, 197, 94, 0.15)' 
+                                : 'rgba(100, 116, 139, 0.15)',
+                              color: factor.direction === 'positive' ? '#16a34a' : '#475569',
+                              '& .MuiChip-icon': {
+                                color: factor.direction === 'positive' ? '#22c55e' : '#64748b',
+                              },
+                            }}
+                          />
+                        ))}
+                      </Box>
+                      {aiPrediction.explanation && (
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary" 
+                          sx={{ mt: 2, fontStyle: 'italic', p: 2, backgroundColor: '#f8fafc', borderRadius: 1 }}
+                        >
+                          {aiPrediction.explanation}
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
+
+              {/* Similar Cases */}
+              {similarCases.length > 0 && (
+                <Grid item xs={12}>
+                  <Card sx={{ borderRadius: 2 }}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                        <Search sx={{ color: '#1e3a8a' }} />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#1e3a8a' }}>
+                          Similar Precedents
+                        </Typography>
+                      </Box>
+                      <List>
+                        {similarCases.map((caseItem, index) => (
+                          <ListItem 
+                            key={index} 
+                            sx={{ 
+                              backgroundColor: '#f8fafc', 
+                              borderRadius: 2, 
+                              mb: 1,
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', mb: 1 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1e3a8a' }}>
+                                {caseItem.title || `Case ${index + 1}`}
+                              </Typography>
+                              {caseItem.outcome && (
+                                <Chip 
+                                  label={caseItem.outcome} 
+                                  size="small"
+                                  sx={{ backgroundColor: '#d97706', color: 'white' }}
+                                />
+                              )}
+                            </Box>
+                            {caseItem.snippet && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                {caseItem.snippet}
+                              </Typography>
+                            )}
+                            {caseItem.url && (
+                              <Button 
+                                size="small" 
+                                href={caseItem.url} 
+                                target="_blank"
+                                sx={{ textTransform: 'none' }}
+                              >
+                                View Full Case →
+                              </Button>
+                            )}
+                            {caseItem.score && (
+                              <Typography variant="caption" color="text.secondary">
+                                Relevance: {(caseItem.score * 100).toFixed(0)}%
+                              </Typography>
+                            )}
+                          </ListItem>
+                        ))}
+                      </List>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
+
+              {/* Action Buttons */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                  <Button
+                    startIcon={<Search />}
+                    onClick={handleSearchPrecedents}
+                    disabled={aiLoading}
+                    variant="outlined"
+                    sx={{ borderColor: '#1e3a8a', color: '#1e3a8a' }}
+                  >
+                    Find More Precedents
+                  </Button>
+                  <Button
+                    startIcon={<Psychology />}
+                    onClick={handleAIAnalysis}
+                    disabled={aiLoading}
+                    variant="contained"
+                    sx={{ backgroundColor: '#d97706' }}
+                  >
+                    Re-analyze Case
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          )}
+        </Paper>
+      </Collapse>
 
       {/* Add Judgement Dialog */}
       <Dialog

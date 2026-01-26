@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react"
-import axios from "axios"
 import {
   Box,
   Button,
@@ -21,11 +20,24 @@ import {
   alpha,
   Chip,
   Divider,
+  LinearProgress,
+  Alert,
+  Tooltip,
+  Snackbar,
 } from "@mui/material"
-import { Gavel, Assessment, CheckCircle, ArrowForward, ArrowBack, RestartAlt } from "@mui/icons-material"
-
-// Use environment variable with fallback
-const API_URL = process.env.REACT_APP_AI_API_URL || "https://ai-court-ai.onrender.com/api"
+import { 
+  Gavel, 
+  Assessment, 
+  CheckCircle, 
+  ArrowForward, 
+  ArrowBack, 
+  RestartAlt, 
+  Warning,
+  TrendingUp,
+  TrendingDown,
+  Info,
+} from "@mui/icons-material"
+import { aiService, getConfidenceDisplay } from "../services/api"
 
 const DynamicQuestionnaire = () => {
   const theme = useTheme()
@@ -36,15 +48,33 @@ const DynamicQuestionnaire = () => {
   const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState({})
   const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
+  const [outcomeDescriptions, setOutcomeDescriptions] = useState({})
+
+  // Fetch outcome descriptions on mount for tooltips
+  useEffect(() => {
+    const fetchOutcomes = async () => {
+      try {
+        const response = await aiService.getOutcomes()
+        if (response.data?.descriptions) {
+          setOutcomeDescriptions(response.data.descriptions)
+        }
+      } catch (error) {
+        console.error("Error fetching outcomes:", error)
+      }
+    }
+    fetchOutcomes()
+  }, [])
 
   useEffect(() => {
     const fetchInitialQuestions = async () => {
       try {
-        const response = await axios.get(`${API_URL}/questions/initial`)
+        const response = await aiService.getInitialQuestions()
         setQuestions(response.data)
         setLoading(false)
       } catch (error) {
         console.error("Error fetching initial questions:", error)
+        setError("Failed to load questions. Please refresh the page.")
         setLoading(false)
       }
     }
@@ -58,12 +88,13 @@ const DynamicQuestionnaire = () => {
     const fetchQuestionsByType = async () => {
       try {
         setLoading(true)
-        const response = await axios.get(`${API_URL}/questions/${caseType}`)
+        const response = await aiService.getQuestionsByType(caseType)
         setQuestions(response.data)
         setCurrentStep(0)
         setLoading(false)
       } catch (error) {
         console.error(`Error fetching ${caseType} questions:`, error)
+        setError(`Failed to load ${caseType} questions.`)
         setLoading(false)
       }
     }
@@ -103,15 +134,18 @@ const DynamicQuestionnaire = () => {
   const handleSubmit = async () => {
     try {
       setSubmitting(true)
+      setError(null)
 
-      const response = await axios.post(`${API_URL}/analyze`, {
+      const response = await aiService.analyzeCase({
         ...answers,
         case_type: caseType,
       })
       setResult(response.data)
       setSubmitting(false)
     } catch (error) {
-      console.error("Error1 submitting case:", error)
+      console.error("Error submitting case:", error)
+      const errorMessage = error?.response?.data?.error || error?.message || "Failed to analyze case"
+      setError(errorMessage)
       setSubmitting(false)
     }
   }
@@ -120,13 +154,20 @@ const DynamicQuestionnaire = () => {
     setCaseType("")
     setAnswers({})
     setResult(null)
-    axios
-      .get(`${API_URL}/questions/initial`)
+    setError(null)
+    aiService.getInitialQuestions()
       .then((response) => {
         setQuestions(response.data)
         setCurrentStep(0)
       })
-      .catch((error) => console.error("Error resetting form:", error))
+      .catch((error) => {
+        console.error("Error resetting form:", error)
+        setError("Failed to reset form. Please refresh the page.")
+      })
+  }
+
+  const handleCloseError = () => {
+    setError(null)
   }
 
   if (loading) {
@@ -162,6 +203,9 @@ const DynamicQuestionnaire = () => {
   }
 
   if (result) {
+    const confidenceInfo = getConfidenceDisplay(result.confidence || 0)
+    const outcomeInfo = outcomeDescriptions[result.judgment] || {}
+    
     return (
       <Box sx={{ maxWidth: 900, margin: "0 auto", mt: 4, px: 2 }}>
         <Card
@@ -205,6 +249,24 @@ const DynamicQuestionnaire = () => {
           </Box>
 
           <CardContent sx={{ p: 4 }}>
+            {/* Needs Review Warning */}
+            {result.needs_review && (
+              <Alert 
+                severity="warning" 
+                icon={<Warning />}
+                sx={{ mb: 3, borderRadius: 2 }}
+              >
+                <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                  ⚠️ This prediction has low confidence and should be reviewed by a legal expert.
+                </Typography>
+                {result.abstention_reason && (
+                  <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+                    Reason: {result.abstention_reason}
+                  </Typography>
+                )}
+              </Alert>
+            )}
+
             <Box sx={{ mb: 4 }}>
               <Box
                 sx={{
@@ -214,6 +276,7 @@ const DynamicQuestionnaire = () => {
                   mb: 4,
                 }}
               >
+                {/* Case Type Card */}
                 <Card
                   sx={{
                     flex: 1,
@@ -244,6 +307,7 @@ const DynamicQuestionnaire = () => {
                   />
                 </Card>
 
+                {/* Predicted Judgment Card */}
                 <Card
                   sx={{
                     flex: 1,
@@ -261,19 +325,174 @@ const DynamicQuestionnaire = () => {
                   >
                     Predicted Judgment
                   </Typography>
-                  <Chip
-                    label={result.judgment}
-                    sx={{
-                      backgroundColor: "#d97706",
-                      color: "white",
-                      fontWeight: 600,
-                      fontSize: "1rem",
-                      height: 40,
-                      "& .MuiChip-label": { px: 2 },
-                    }}
-                  />
+                  <Tooltip 
+                    title={outcomeInfo.meaning || ""}
+                    arrow
+                    placement="top"
+                  >
+                    <Chip
+                      label={result.judgment}
+                      sx={{
+                        backgroundColor: "#d97706",
+                        color: "white",
+                        fontWeight: 600,
+                        fontSize: "1rem",
+                        height: 40,
+                        "& .MuiChip-label": { px: 2 },
+                        cursor: "pointer",
+                      }}
+                    />
+                  </Tooltip>
+                  {result.judgment_source && (
+                    <Typography variant="caption" sx={{ display: "block", mt: 1, opacity: 0.7 }}>
+                      Source: {result.judgment_source}
+                    </Typography>
+                  )}
                 </Card>
               </Box>
+
+              {/* Confidence Score Section */}
+              <Card
+                sx={{
+                  background: `linear-gradient(135deg, ${alpha(confidenceInfo.color, 0.1)} 0%, ${alpha(confidenceInfo.color, 0.05)} 100%)`,
+                  border: `2px solid ${alpha(confidenceInfo.color, 0.3)}`,
+                  borderRadius: 2,
+                  p: 3,
+                  mb: 3,
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.mode === "dark" ? "#e2e8f0" : "#374151" }}>
+                    Confidence Score
+                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography sx={{ fontSize: "1.5rem" }}>{confidenceInfo.icon}</Typography>
+                    <Chip
+                      label={confidenceInfo.level}
+                      sx={{
+                        backgroundColor: confidenceInfo.color,
+                        color: "white",
+                        fontWeight: 600,
+                      }}
+                    />
+                  </Box>
+                </Box>
+                <Box sx={{ mb: 1 }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={(result.confidence || 0) * 100}
+                    sx={{
+                      height: 12,
+                      borderRadius: 6,
+                      backgroundColor: alpha(confidenceInfo.color, 0.2),
+                      "& .MuiLinearProgress-bar": {
+                        backgroundColor: confidenceInfo.color,
+                        borderRadius: 6,
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.mode === "dark" ? "#94a3b8" : "#64748b" }}>
+                    {confidenceInfo.message}
+                  </Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 700, color: confidenceInfo.color }}>
+                    {((result.confidence || 0) * 100).toFixed(1)}%
+                  </Typography>
+                </Box>
+              </Card>
+
+              {/* Key Factors Section */}
+              {result.key_factors && result.key_factors.length > 0 && (
+                <Card
+                  sx={{
+                    background: alpha("#1e3a8a", 0.03),
+                    border: `1px solid ${alpha("#1e3a8a", 0.1)}`,
+                    borderRadius: 2,
+                    p: 3,
+                    mb: 3,
+                  }}
+                >
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: theme.palette.mode === "dark" ? "#e2e8f0" : "#1e3a8a",
+                      mb: 2,
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
+                    <Info sx={{ fontSize: 20 }} />
+                    Key Factors Influencing Prediction
+                  </Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+                    {result.key_factors.map((factor, index) => (
+                      <Chip
+                        key={index}
+                        icon={factor.direction === "positive" ? <TrendingUp /> : <TrendingDown />}
+                        label={`${factor.feature} (${Math.round(factor.importance * 100)}%)`}
+                        sx={{
+                          backgroundColor: factor.direction === "positive" 
+                            ? alpha("#22c55e", 0.15) 
+                            : alpha("#64748b", 0.15),
+                          color: factor.direction === "positive" ? "#16a34a" : "#475569",
+                          fontWeight: 500,
+                          "& .MuiChip-icon": {
+                            color: factor.direction === "positive" ? "#22c55e" : "#64748b",
+                          },
+                        }}
+                      />
+                    ))}
+                  </Box>
+                  {result.explanation && (
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        mt: 2, 
+                        p: 2, 
+                        backgroundColor: alpha("#1e3a8a", 0.05),
+                        borderRadius: 1,
+                        color: theme.palette.mode === "dark" ? "#94a3b8" : "#64748b",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      {result.explanation}
+                    </Typography>
+                  )}
+                </Card>
+              )}
+
+              {/* Outcome Implications */}
+              {outcomeInfo.implications && (
+                <Card
+                  sx={{
+                    background: alpha("#d97706", 0.05),
+                    border: `1px solid ${alpha("#d97706", 0.2)}`,
+                    borderRadius: 2,
+                    p: 3,
+                    mb: 3,
+                  }}
+                >
+                  <Typography variant="h6" sx={{ color: "#d97706", mb: 2, fontWeight: 600 }}>
+                    What This Means
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 2, color: theme.palette.mode === "dark" ? "#e2e8f0" : "#374151" }}>
+                    {outcomeInfo.implications}
+                  </Typography>
+                  {outcomeInfo.next_steps && (
+                    <>
+                      <Typography variant="subtitle2" sx={{ color: "#d97706", fontWeight: 600, mt: 2 }}>
+                        Recommended Next Steps:
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: theme.palette.mode === "dark" ? "#94a3b8" : "#64748b" }}>
+                        {outcomeInfo.next_steps}
+                      </Typography>
+                    </>
+                  )}
+                </Card>
+              )}
             </Box>
 
             <Divider sx={{ my: 4, borderColor: alpha("#1e3a8a", 0.1) }} />
@@ -291,7 +510,7 @@ const DynamicQuestionnaire = () => {
                 Case Details Summary
               </Typography>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {Object.entries(result.answers).map(([key, value]) => (
+                {result.answers && Object.entries(result.answers).map(([key, value]) => (
                   <Box
                     key={key}
                     sx={{
@@ -346,6 +565,12 @@ const DynamicQuestionnaire = () => {
             </Box>
           </CardContent>
         </Card>
+
+        <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}>
+          <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
+            {error}
+          </Alert>
+        </Snackbar>
       </Box>
     )
   }
@@ -620,6 +845,12 @@ const DynamicQuestionnaire = () => {
           </Box>
         </CardContent>
       </Card>
+
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}>
+        <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
+          {error}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }
