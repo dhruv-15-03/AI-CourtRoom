@@ -16,21 +16,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class jwtValidator extends OncePerRequestFilter {
+public class JwtValidator extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
-        String jwt=request.getHeader(JwtConstants.HEADER);
-        if(jwt!=null){
-            try{
-              String email=JwtProvider.getEmailFromJwt(jwt);
-                List<GrantedAuthority> authorities=new ArrayList<>();
-                Authentication authentication=new UsernamePasswordAuthenticationToken(email,null,authorities);
+        String jwt = request.getHeader(JwtConstants.HEADER);
+        if (jwt != null) {
+            try {
+                String email = JwtProvider.getEmailFromJwt(jwt);
+                List<GrantedAuthority> authorities = new ArrayList<>();
+                Authentication authentication = new UsernamePasswordAuthenticationToken(email, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-            }catch (Exception e){
+            } catch (Exception e) {
                 throw new BadCredentialsException("Invalid token.....");
             }
         }
-        filterChain.doFilter(request,response);
+        filterChain.doFilter(request, response);
     }
 }
