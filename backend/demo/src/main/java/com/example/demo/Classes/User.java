@@ -141,6 +141,19 @@ public class User {
     private LocalDateTime lastLogin;
     private Integer freeTrialAttempts;
     
+    // Email Verification
+    private Boolean emailVerified;
+    private String emailOtp;
+    private LocalDateTime emailOtpExpiry;
+    private Integer emailOtpAttempts;
+    
+    // Mobile Verification
+    private Boolean mobileVerified;
+    private String mobileOtp;
+    private LocalDateTime mobileOtpExpiry;
+    private Integer mobileOtpAttempts;
+    private String firebaseUid; // For Firebase phone auth
+    
     @Column(updatable = false)
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -151,6 +164,10 @@ public class User {
         updatedAt = LocalDateTime.now();
         isActive = true;
         isVerified = false;
+        emailVerified = false;
+        mobileVerified = false;
+        emailOtpAttempts = 0;
+        mobileOtpAttempts = 0;
         casesHandled = 0;
         casesWon = 0;
         successRate = 0.0;

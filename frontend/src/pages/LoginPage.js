@@ -79,6 +79,10 @@ const LoginPage = ({ showNotification }) => {
         
         // Navigation will be handled by the App.js LandingRedirect based on actual user role
         navigate('/');
+      } else if (result.requiresVerification) {
+        // User needs to verify email/mobile first
+        showNotification && showNotification('Please verify your account to continue.', 'warning');
+        navigate('/verify', { state: { email: formData.email.toLowerCase() } });
       } else {
         showNotification && showNotification(result.error, 'error');
       }

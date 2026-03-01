@@ -19,6 +19,12 @@ import java.util.List;
 public class JwtValidator extends OncePerRequestFilter {
 
     @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/auth/") || path.startsWith("/api/verification/");
+    }
+
+    @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
         String jwt = request.getHeader(JwtConstants.HEADER);
         if (jwt != null) {

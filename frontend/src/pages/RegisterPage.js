@@ -145,14 +145,14 @@ const RegisterPage = ({ showNotification }) => {
       const result = await register(userData);
       
       if (result.success) {
-        showNotification && showNotification('Registration successful! Welcome to AI Courtroom.', 'success');
+        showNotification && showNotification('Registration successful! Please verify your email.', 'success');
         
-        // Navigate based on role
-        const redirectPath = 
-          formData.role === 'lawyer' ? '/lawyer/dashboard' :
-          formData.role === 'judge' ? '/judge/dashboard' : '/';
-        
-        navigate(redirectPath);
+        // Redirect to verification page instead of dashboard
+        navigate('/verify', { state: { email: formData.email.toLowerCase() } });
+      } else if (result.requiresVerification) {
+        // User already registered but not verified
+        showNotification && showNotification('Please verify your email to continue.', 'info');
+        navigate('/verify', { state: { email: formData.email.toLowerCase() } });
       } else {
         showNotification && showNotification(result.error, 'error');
       }

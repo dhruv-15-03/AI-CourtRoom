@@ -21,6 +21,7 @@ const AIQuestionare = React.lazy(() => import('./pages/AIQuestionare.jsx'));
 const Chatbot = React.lazy(() => import('./pages/Chatbot'));
 const ChatPage = React.lazy(() => import('./pages/ChatPage'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+const SubscriptionPage = React.lazy(() => import('./pages/SubscriptionPage'));
 
 // Lawyer Routes
 const LawyerRoutes = React.lazy(() => import('./routes/LawyerRoutes'));
@@ -36,6 +37,7 @@ const JudgeChats = React.lazy(() => import('./pages/judge/Chats.jsx'));
 
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
+const VerificationPage = React.lazy(() => import('./pages/VerificationPage'));
 const Cases = React.lazy(() => import('./pages/Cases.jsx'));
 const CreateCase = React.lazy(() => import('./pages/CreateCase.jsx'));
 const CaseDetails = React.lazy(() => import('./pages/CaseDetails.jsx'));
@@ -189,17 +191,22 @@ function AppContent() {
                       <Route path="/my-profile" element={<ProfilePage />} />
                       <Route path="/chats" element={<ChatPage />} />
                       <Route path="/ai-chat" element={<AIQuestionare />} />
+                      <Route path="/subscription" element={<SubscriptionPage />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
                     </>
                   )}
 
                   {/* Lawyer Routes */}
                   {userRole === 'lawyer' && (
-                    <Route path="/lawyer/*" element={<LawyerRoutes mode={mode} setMode={setMode} />} />
+                    <>
+                      <Route path="/lawyer/*" element={<LawyerRoutes mode={mode} setMode={setMode} />} />
+                      <Route path="/subscription" element={<SubscriptionPage />} />
+                    </>
                   )}
 
                   {/* Judge Routes */}
                   {userRole === 'judge' && (
+                    <>
                     <Route path="/judge/*" element={<JudgeLayout mode={mode} setMode={setMode} />}>                    
                       <Route index element={<Navigate to="dashboard" replace />} />
                       <Route path="dashboard" element={<JudgeDashboard />} />
@@ -210,6 +217,8 @@ function AppContent() {
                       <Route path="profile" element={<JudgeProfile />} />
                       <Route path="*" element={<Navigate to="dashboard" replace />} />
                     </Route>
+                    <Route path="/subscription" element={<SubscriptionPage />} />
+                    </>
                   )}
 
                   {/* Redirect based on role for any unmatched route */}
@@ -229,6 +238,7 @@ function AppContent() {
               <Route path="/" element={<LandingRedirect />} />
               <Route path="/login" element={<LoginPage showNotification={showNotification} />} />
               <Route path="/register" element={<RegisterPage showNotification={showNotification} />} />
+              <Route path="/verify" element={<VerificationPage />} />
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </React.Suspense>

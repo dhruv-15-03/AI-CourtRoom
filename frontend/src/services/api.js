@@ -44,7 +44,21 @@ api.interceptors.response.use(
       message: error.message
     });
     
-    // Handle JWT token errors
+    // Handle JWT token errors - but NOT 403 from auth endpoints (verification flow)
+    const requestUrl = error.config?.url || '';
+    const isAuthEndpoint = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/signup');
+    const requiresVerification = error.response?.data?.requiresVerification;
+    
+    // Skip force-logout for verification-related 403s from auth endpoints
+    if (isAuthEndpoint && (error.response?.status === 403) && requiresVerification) {
+      return Promise.reject(error);
+    }
+    
+    // Skip force-logout for subscription/access-related 403s (user is logged in but plan insufficient)
+    if (error.response?.status === 403 && !error.response?.data?.message?.includes('JWT') && !error.response?.data?.message?.includes('token')) {
+      return Promise.reject(error);
+    }
+    
     if (error.response?.status === 401 || 
         error.response?.status === 403 ||
         (error.response?.data?.message && 
@@ -169,6 +183,47 @@ export const chatService = {
   
   // Legacy methods for backward compatibility
   getMessages: (chatId) => api.get(`/api/chat/${chatId}/messages`),
+};
+
+// Subscription Services - Payment and Plan Management
+export const subscriptionService = {
+  /**
+   * Get all available subscription plans
+   */
+  getPlans: () => api.get('/api/subscription/plans'),
+  
+  /**
+   * Check user's current access status (subscription/free trial)
+   */
+  checkAccess: () => api.get('/api/subscription/access'),
+  
+  /**
+   * Get user's subscription history
+   */
+  getHistory: () => api.get('/api/subscription/history'),
+  
+  /**
+   * Create a Razorpay order for subscription purchase
+   * @param {string} planId - The plan ID (e.g., 'BASIC', 'PRO', 'PREMIUM', 'UNLIMITED')
+   */
+  createOrder: (planId) => api.post('/api/subscription/create-order', { planId }),
+  
+  /**
+   * Verify payment and activate subscription
+   * @param {Object} paymentData - { orderId, paymentId, signature, paymentMethod }
+   */
+  verifyPayment: (paymentData) => api.post('/api/subscription/verify-payment', paymentData),
+  
+  /**
+   * Cancel a subscription
+   * @param {number} subscriptionId - The subscription ID to cancel
+   */
+  cancelSubscription: (subscriptionId) => api.post(`/api/subscription/${subscriptionId}/cancel`),
+  
+  /**
+   * Use an AI query (call before each AI request to track usage)
+   */
+  useQuery: () => api.post('/api/subscription/use-query'),
 };
 
 // AI Court API Services - Comprehensive Legal Case Prediction

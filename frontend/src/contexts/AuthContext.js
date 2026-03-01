@@ -140,6 +140,22 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, message };
     } catch (error) {
+      // Check if verification is required (403 status)
+      if (error.response?.status === 403 && error.response?.data?.requiresVerification) {
+        dispatch({
+          type: 'LOGIN_FAILURE',
+          payload: 'Account verification required',
+        });
+        return { 
+          success: false, 
+          requiresVerification: true,
+          email: error.response?.data?.email,
+          emailVerified: error.response?.data?.emailVerified,
+          mobileVerified: error.response?.data?.mobileVerified,
+          error: error.response?.data?.message || 'Please verify your account'
+        };
+      }
+      
       const errorMessage = error.response?.data?.message || 'Login failed';
       dispatch({
         type: 'LOGIN_FAILURE',
@@ -182,26 +198,18 @@ export const AuthProvider = ({ children }) => {
       );
 
       const response = await authService.register(sanitized);
-      const { token, message } = response.data;
+      const { message, requiresVerification } = response.data;
       
-      localStorage.setItem('authToken', token);
-  // Keep UI role as originally chosen for client-side routing
-  localStorage.setItem('userRole', userData.role);
+      // New flow: registration requires verification before login
+      // Don't auto-login, return success and let the page redirect to verification
+      dispatch({ type: 'CLEAR_ERROR' });
       
-      const user = { 
-        role: userData.role, 
-        email: (userData.email || '').toLowerCase(),
-        firstName: userData.firstName,
-        lastName: userData.lastName 
+      return { 
+        success: true, 
+        message,
+        requiresVerification: requiresVerification || true,
+        email: (userData.email || '').toLowerCase()
       };
-      localStorage.setItem('userProfile', JSON.stringify(user));
-
-      dispatch({
-        type: 'LOGIN_SUCCESS',
-        payload: { token, user },
-      });
-
-      return { success: true, message };
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Registration failed';
       dispatch({

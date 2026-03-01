@@ -11,10 +11,11 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  Divider,
 } from "@mui/material"
-import { Psychology, Chat, AutoAwesome } from "@mui/icons-material"
+import { Psychology, Chat, AutoAwesome, Star, CreditCard, CheckCircle } from "@mui/icons-material"
 import { useNavigate } from "react-router-dom"
-import { userService } from "../services/api"
+import { userService, subscriptionService } from "../services/api"
 
 export default function AIAssistant() {
   const theme = useTheme()
@@ -23,39 +24,61 @@ export default function AIAssistant() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [subscription, setSubscription] = useState(null)
+  const [hasAccess, setHasAccess] = useState(false)
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchData = async () => {
       try {
-        const response = await userService.getProfile()
-        setAttemptsLeft(response.data.freeTrialAttempts !== undefined ? response.data.freeTrialAttempts : 0)
+        // Fetch profile and subscription status in parallel
+        const [profileRes, accessRes] = await Promise.all([
+          userService.getProfile(),
+          subscriptionService.checkAccess(),
+        ])
+        
+        setAttemptsLeft(profileRes.data.freeTrialAttempts !== undefined ? profileRes.data.freeTrialAttempts : 0)
+        
+        const access = accessRes.data
+        setSubscription(access)
+        setHasAccess(access.hasAccess || false)
       } catch (error) {
-        console.error("Error fetching profile:", error)
+        console.error("Error fetching data:", error)
         setError("Failed to load profile data. Please try again.")
       } finally {
         setLoading(false)
       }
     }
-    fetchProfile()
+    fetchData()
   }, [])
 
   const handleStart = async () => {
-    if (attemptsLeft > 0) {
-      setActionLoading(true)
-      try {
+    setActionLoading(true)
+    try {
+      // Check if user has subscription access
+      if (subscription?.accessType === "SUBSCRIPTION" && hasAccess) {
+        // Track subscription usage
+        const usageRes = await subscriptionService.useQuery()
+        if (usageRes.data.success) {
+          navigate("/ai-chat")
+        } else {
+          setError(usageRes.data.error || "Unable to use subscription. Please try again.")
+        }
+      } else if (attemptsLeft > 0) {
+        // Use free trial
         const response = await userService.decrementAttempts()
         if (response.data.success) {
-            setAttemptsLeft(response.data.attemptsLeft)
-            navigate("/ai-chat")
+          setAttemptsLeft(response.data.attemptsLeft)
+          navigate("/ai-chat")
         }
-      } catch (error) {
-        console.error("Error decrementing attempts:", error)
-        setError("Failed to start consultation. Please try again.")
-      } finally {
-        setActionLoading(false)
+      } else {
+        // No access - redirect to subscription page
+        navigate("/subscription")
       }
-    } else {
-        setError("You have exhausted your free trial attempts.")
+    } catch (error) {
+      console.error("Error starting consultation:", error)
+      setError("Failed to start consultation. Please try again.")
+    } finally {
+      setActionLoading(false)
     }
   }
 
@@ -115,6 +138,46 @@ export default function AIAssistant() {
 
         <Box sx={{ p: 4 }}>
           <Box sx={{ textAlign: "center", mb: 4 }}>
+            {/* Show subscription status if active */}
+            {subscription?.accessType === "SUBSCRIPTION" && hasAccess && (
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 2,
+                  p: 2,
+                  backgroundColor: alpha("#22c55e", 0.1),
+                  borderRadius: 2,
+                  border: `1px solid ${alpha("#22c55e", 0.2)}`,
+                  mb: 3,
+                }}
+              >
+                <CheckCircle sx={{ color: "#22c55e", fontSize: 24 }} />
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: "#22c55e",
+                    fontWeight: 600,
+                    fontFamily: "serif",
+                  }}
+                >
+                  {subscription.plan} Plan Active
+                </Typography>
+                <Chip
+                  label={subscription.isUnlimited ? "Unlimited" : `${subscription.queriesRemaining} queries`}
+                  sx={{
+                    backgroundColor: "#22c55e",
+                    color: "white",
+                    fontWeight: 700,
+                    fontSize: "0.9rem",
+                    height: 32,
+                  }}
+                />
+              </Box>
+            )}
+            
+            {/* Show free trial status if using free trial */}
+            {(subscription?.accessType === "FREE_TRIAL" || !subscription?.accessType) && attemptsLeft > 0 && (
             <Box
               sx={{
                 display: "inline-flex",
@@ -150,6 +213,7 @@ export default function AIAssistant() {
                 }}
               />
             </Box>
+            )}
 
             <Typography
               variant="body1"
@@ -169,11 +233,11 @@ export default function AIAssistant() {
             <Button
               variant="contained"
               onClick={handleStart}
-              disabled={attemptsLeft === 0 || actionLoading}
+              disabled={(!hasAccess && attemptsLeft === 0) || actionLoading}
               startIcon={actionLoading ? <CircularProgress size={20} color="inherit" /> : <Chat />}
               sx={{
                 background:
-                  attemptsLeft > 0 ? `linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)` : alpha("#64748b", 0.3),
+                  (hasAccess || attemptsLeft > 0) ? `linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)` : alpha("#64748b", 0.3),
                 color: "white",
                 px: 4,
                 py: 1.5,
@@ -181,9 +245,9 @@ export default function AIAssistant() {
                 fontWeight: 600,
                 borderRadius: 2,
                 textTransform: "none",
-                boxShadow: attemptsLeft > 0 ? `0 4px 12px ${alpha("#1e3a8a", 0.3)}` : "none",
+                boxShadow: (hasAccess || attemptsLeft > 0) ? `0 4px 12px ${alpha("#1e3a8a", 0.3)}` : "none",
                 "&:hover":
-                  attemptsLeft > 0
+                  (hasAccess || attemptsLeft > 0)
                     ? {
                         background: `linear-gradient(135deg, #1e40af 0%, #2563eb 100%)`,
                         transform: "translateY(-2px)",
@@ -201,7 +265,7 @@ export default function AIAssistant() {
               {actionLoading ? "Starting..." : "Start Legal Consultation"}
             </Button>
 
-            {attemptsLeft === 0 && (
+            {!hasAccess && attemptsLeft === 0 && (
               <Box
                 sx={{
                   p: 3,
@@ -216,15 +280,78 @@ export default function AIAssistant() {
                     color: "#ef4444",
                     fontWeight: 600,
                     fontSize: "1rem",
+                    mb: 2,
                   }}
                 >
-                  You have used all free consultations. Please subscribe for unlimited access to our AI legal assistant.
+                  You have used all free consultations. Subscribe for unlimited access to our AI legal assistant.
                 </Typography>
+                <Button
+                  variant="contained"
+                  onClick={() => navigate("/subscription")}
+                  startIcon={<Star />}
+                  sx={{
+                    background: `linear-gradient(135deg, #d97706 0%, #ea580c 100%)`,
+                    color: "white",
+                    px: 3,
+                    py: 1,
+                    fontWeight: 600,
+                    borderRadius: 2,
+                    textTransform: "none",
+                    "&:hover": {
+                      background: `linear-gradient(135deg, #ea580c 0%, #f97316 100%)`,
+                      transform: "translateY(-2px)",
+                    },
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  View Subscription Plans
+                </Button>
               </Box>
             )}
           </Box>
         </Box>
       </Card>
+      
+      {/* Upgrade Banner for Free Trial Users */}
+      {subscription?.accessType === "FREE_TRIAL" && attemptsLeft > 0 && attemptsLeft <= 2 && (
+        <Card
+          elevation={0}
+          sx={{
+            mt: 3,
+            p: 3,
+            background: `linear-gradient(135deg, ${alpha("#d97706", 0.1)} 0%, ${alpha("#ea580c", 0.05)} 100%)`,
+            border: `1px solid ${alpha("#d97706", 0.2)}`,
+            borderRadius: 3,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: "#d97706", fontFamily: "serif" }}>
+                Running Low on Free Consultations?
+              </Typography>
+              <Typography variant="body2" sx={{ color: theme.palette.mode === "dark" ? "#94a3b8" : "#64748b" }}>
+                Upgrade to a subscription plan for unlimited AI legal assistance
+              </Typography>
+            </Box>
+            <Button
+              variant="outlined"
+              onClick={() => navigate("/subscription")}
+              startIcon={<CreditCard />}
+              sx={{
+                borderColor: "#d97706",
+                color: "#d97706",
+                fontWeight: 600,
+                "&:hover": {
+                  borderColor: "#ea580c",
+                  backgroundColor: alpha("#d97706", 0.1),
+                },
+              }}
+            >
+              View Plans
+            </Button>
+          </Box>
+        </Card>
+      )}
       
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}>
         <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>

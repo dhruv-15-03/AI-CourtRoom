@@ -9,6 +9,7 @@ import ChatIcon from "@mui/icons-material/Chat"
 import AccountCircleIcon from "@mui/icons-material/AccountCircle"
 import CaseIcon from "@mui/icons-material/FolderOpen"
 import Brightness4Icon from "@mui/icons-material/Brightness4"
+import StarIcon from "@mui/icons-material/Star"
 import { useNavigate, useLocation } from "react-router-dom"
 
 const Sidebar = memo(function Sidebar({ mode, setMode }) {
@@ -22,6 +23,7 @@ const Sidebar = memo(function Sidebar({ mode, setMode }) {
     { path: "/cases", label: "Cases", icon: <CaseIcon /> },
     { path: "/my-profile", label: "My Profile", icon: <AccountCircleIcon /> },
     { path: "/chats", label: "Chats", icon: <ChatIcon /> },
+    { path: "/subscription", label: "Subscription", icon: <StarIcon /> },
   ], [])
 
   const toggleMode = useCallback(() => {
