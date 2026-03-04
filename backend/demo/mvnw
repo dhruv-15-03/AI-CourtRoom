@@ -1,0 +1,169 @@
+#!/bin/sh
+# ----------------------------------------------------------------------------
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+# Apache Maven Wrapper startup batch script, version 3.3.2
+#
+# Optional ENV vars
+#   JAVA_HOME - location of a JDK home dir, required when download maven via java source
+#   MVNW_REPOURL - repo url base for downloading maven distribution
+#   MVNW_USERNAME/MVNW_PASSWORD - user and password for downloading maven
+#   MVNW_VERBOSE - true: enable verbose log; debug: trace the mvnw script; others: silence the output
+# ----------------------------------------------------------------------------
+
+set -euf
+[ "${MVNW_VERBOSE-}" != debug ] || set -x
+
+# OS specific support.
+native_path() { printf %s\\n "$1"; }
+case "$(uname)" in
+CYGWIN* | MINGW*)
+  [ -z "${JAVA_HOME-}" ] || JAVA_HOME="$(cygpath --unix "$JAVA_HOME")"
+  native_path() { cygpath --path --windows "$1"; }
+  ;;
+esac
+
+# set JAVA_CMD
+# https://github.com/apache/maven-mvnw/blob/maven-mvnw-1.0.0/src/main/script/mvnw#L235
+set +e
+if [ -n "${JAVA_HOME-}" ]; then
+  if [ -x "$JAVA_HOME/jre/sh/java" ]; then
+    # IBM's JDK on AIX uses strange locations for the executables
+    JAVA_CMD="$JAVA_HOME/jre/sh/java"
+  else
+    JAVA_CMD="$JAVA_HOME/bin/java"
+    if [ ! -x "$JAVA_CMD" ]; then
+      JAVA_CMD="$JAVA_HOME/bin/java"
+    fi
+  fi
+  if [ ! -x "$JAVA_CMD" ]; then
+    echo "The JAVA_HOME environment variable is not defined correctly, so Apache Maven Wrapper can not start." >&2
+    echo "JAVA_HOME is set to \"$JAVA_HOME\", but command \"$JAVA_CMD\" does not exist." >&2
+    exit 1
+  fi
+else
+  JAVA_CMD="$(\unset -f command 2>/dev/null; \command -v java)" || :
+  if [ ! -x "${JAVA_CMD-}" ]; then
+    echo "The java binary is not accessible in PATH, so Apache Maven Wrapper can not start." >&2
+    echo "Either set the JAVA_HOME environment variable, or add java to the PATH." >&2
+    exit 1
+  fi
+fi
+set -e
+
+# hash the arguments to determine the wrapper version that is being requested
+# if it has not been installed already
+find_maven_basedir() {
+  if [ -z "$1" ]; then
+    echo "Path not specified to find_maven_basedir"
+    return 1
+  fi
+
+  basedir="$1"
+  wdir="$1"
+  while [ "$wdir" != '/' ]; do
+    if [ -d "$wdir"/.mvn ]; then
+      basedir="$wdir"
+      break
+    fi
+    # workaround for JBEAP-8937 (on Solaris 10/Sparc)
+    if [ -d "${wdir}" ]; then
+      wdir="$(cd "$wdir/.." && pwd)"
+    fi
+    # end of workaround
+  done
+  printf '%s' "$(cd "$basedir" && pwd -P)"
+}
+
+abs_path() {
+  local target="$1"
+
+  # Handle relative vs absolute path
+  if [ "$(echo "$target" | cut -c1)" != '/' ]; then
+    target="$(pwd)/$target"
+  fi
+
+  printf %s\\n "$target"
+}
+
+MAVEN_PROJECTBASEDIR="${MAVEN_BASEDIR:-$(find_maven_basedir "$(pwd)")}"
+MAVEN_WRAPPERDIR="$MAVEN_PROJECTBASEDIR/.mvn/wrapper"
+MAVEN_PROPERTIES_FILE="$MAVEN_WRAPPERDIR/maven-wrapper.properties"
+
+# Read properties file
+if [ -f "$MAVEN_PROPERTIES_FILE" ]; then
+  distributionUrl="$(grep 'distributionUrl=' "$MAVEN_PROPERTIES_FILE" | cut -d'=' -f2- | tr -d '\r\n')"
+  wrapperUrl="$(grep 'wrapperUrl=' "$MAVEN_PROPERTIES_FILE" | cut -d'=' -f2- | tr -d '\r\n')"
+  wrapperVersion="$(grep 'wrapperVersion=' "$MAVEN_PROPERTIES_FILE" | cut -d'=' -f2- | tr -d '\r\n')"
+fi
+
+# Default values
+: "${distributionUrl:="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip"}"
+
+MAVEN_HOME="${MAVEN_HOME:-"${HOME}/.m2/wrapper/dists/apache-maven-${distributionUrl##*apache-maven-}"}"
+MAVEN_HOME="${MAVEN_HOME%%-bin*}"
+
+if [ -x "$MAVEN_HOME/bin/mvn" ]; then
+  verbose "Found existing Maven installation at $MAVEN_HOME"
+else
+  echo "Downloading Maven from: $distributionUrl"
+
+  # Create temp dir for download
+  if TMP_DOWNLOAD_DIR="$(mktemp -d)" && [ -d "$TMP_DOWNLOAD_DIR" ]; then
+    clean() { rm -rf -- "$TMP_DOWNLOAD_DIR"; }
+    trap clean HUP INT TERM EXIT
+  else
+    echo "Cannot create temp dir" >&2
+    exit 1
+  fi
+
+  TMP_FILE="$TMP_DOWNLOAD_DIR/maven.zip"
+
+  # Use curl or wget to download
+  if command -v curl > /dev/null 2>&1; then
+    curl ${MVNW_VERBOSE:+"--progress-bar"} -fsSL -o "$TMP_FILE" "$distributionUrl" \
+      ${MVNW_USERNAME:+-u "$MVNW_USERNAME:$MVNW_PASSWORD"}
+  elif command -v wget > /dev/null 2>&1; then
+    wget ${MVNW_VERBOSE:+"-v"} -q -O "$TMP_FILE" "$distributionUrl" \
+      ${MVNW_USERNAME:+--http-user="$MVNW_USERNAME" --http-password="$MVNW_PASSWORD"}
+  else
+    echo "Cannot find curl or wget to download Maven" >&2
+    exit 1
+  fi
+
+  # Unzip
+  mkdir -p "${MAVEN_HOME%/*}"
+  if command -v unzip > /dev/null 2>&1; then
+    unzip -q -o "$TMP_FILE" -d "$TMP_DOWNLOAD_DIR"
+  else
+    "$JAVA_CMD" -cp "$TMP_FILE" -jar "$TMP_FILE" -d "$TMP_DOWNLOAD_DIR" 2>/dev/null || {
+      echo "Cannot unzip Maven distribution" >&2
+      exit 1
+    }
+  fi
+
+  # Move to final location
+  mv "$TMP_DOWNLOAD_DIR"/apache-maven-*/ "$MAVEN_HOME" 2>/dev/null || \
+    cp -r "$TMP_DOWNLOAD_DIR"/apache-maven-*/ "$MAVEN_HOME"
+
+  clean || :
+fi
+
+exec "$MAVEN_HOME/bin/mvn" "$@"
