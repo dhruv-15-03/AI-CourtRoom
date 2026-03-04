@@ -21,7 +21,10 @@ public class JwtValidator extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/auth/") || path.startsWith("/api/verification/");
+        return path.startsWith("/auth/") 
+            || path.startsWith("/api/verification/")
+            || path.equals("/api/subscription/plans")
+            || path.equals("/api/subscription/webhook");
     }
 
     @Override

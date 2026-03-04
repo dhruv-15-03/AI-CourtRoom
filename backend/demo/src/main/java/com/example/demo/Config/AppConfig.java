@@ -45,6 +45,8 @@ public class AppConfig implements WebMvcConfigurer {
         http.authorizeHttpRequests(Authorize -> Authorize
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/api/verification/**").permitAll()
+                .requestMatchers("/api/subscription/plans").permitAll()
+                .requestMatchers("/api/subscription/webhook").permitAll()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll())
                 .addFilterBefore(new JwtValidator(), BasicAuthenticationFilter.class)
