@@ -18,152 +18,95 @@
 # under the License.
 # ----------------------------------------------------------------------------
 
-# ----------------------------------------------------------------------------
-# Apache Maven Wrapper startup batch script, version 3.3.2
-#
-# Optional ENV vars
-#   JAVA_HOME - location of a JDK home dir, required when download maven via java source
-#   MVNW_REPOURL - repo url base for downloading maven distribution
-#   MVNW_USERNAME/MVNW_PASSWORD - user and password for downloading maven
-#   MVNW_VERBOSE - true: enable verbose log; debug: trace the mvnw script; others: silence the output
-# ----------------------------------------------------------------------------
+# Maven Wrapper script - downloads and runs Apache Maven
 
-set -euf
-[ "${MVNW_VERBOSE-}" != debug ] || set -x
-
-# OS specific support.
-native_path() { printf %s\\n "$1"; }
-case "$(uname)" in
-CYGWIN* | MINGW*)
-  [ -z "${JAVA_HOME-}" ] || JAVA_HOME="$(cygpath --unix "$JAVA_HOME")"
-  native_path() { cygpath --path --windows "$1"; }
-  ;;
-esac
-
-# set JAVA_CMD
-# https://github.com/apache/maven-mvnw/blob/maven-mvnw-1.0.0/src/main/script/mvnw#L235
-set +e
-if [ -n "${JAVA_HOME-}" ]; then
-  if [ -x "$JAVA_HOME/jre/sh/java" ]; then
-    # IBM's JDK on AIX uses strange locations for the executables
-    JAVA_CMD="$JAVA_HOME/jre/sh/java"
-  else
-    JAVA_CMD="$JAVA_HOME/bin/java"
-    if [ ! -x "$JAVA_CMD" ]; then
-      JAVA_CMD="$JAVA_HOME/bin/java"
-    fi
-  fi
-  if [ ! -x "$JAVA_CMD" ]; then
-    echo "The JAVA_HOME environment variable is not defined correctly, so Apache Maven Wrapper can not start." >&2
-    echo "JAVA_HOME is set to \"$JAVA_HOME\", but command \"$JAVA_CMD\" does not exist." >&2
-    exit 1
-  fi
-else
-  JAVA_CMD="$(\unset -f command 2>/dev/null; \command -v java)" || :
-  if [ ! -x "${JAVA_CMD-}" ]; then
-    echo "The java binary is not accessible in PATH, so Apache Maven Wrapper can not start." >&2
-    echo "Either set the JAVA_HOME environment variable, or add java to the PATH." >&2
-    exit 1
-  fi
-fi
 set -e
 
-# hash the arguments to determine the wrapper version that is being requested
-# if it has not been installed already
-find_maven_basedir() {
-  if [ -z "$1" ]; then
-    echo "Path not specified to find_maven_basedir"
-    return 1
-  fi
-
-  basedir="$1"
-  wdir="$1"
-  while [ "$wdir" != '/' ]; do
-    if [ -d "$wdir"/.mvn ]; then
-      basedir="$wdir"
-      break
-    fi
-    # workaround for JBEAP-8937 (on Solaris 10/Sparc)
-    if [ -d "${wdir}" ]; then
-      wdir="$(cd "$wdir/.." && pwd)"
-    fi
-    # end of workaround
-  done
-  printf '%s' "$(cd "$basedir" && pwd -P)"
-}
-
-abs_path() {
-  local target="$1"
-
-  # Handle relative vs absolute path
-  if [ "$(echo "$target" | cut -c1)" != '/' ]; then
-    target="$(pwd)/$target"
-  fi
-
-  printf %s\\n "$target"
-}
-
-MAVEN_PROJECTBASEDIR="${MAVEN_BASEDIR:-$(find_maven_basedir "$(pwd)")}"
+MAVEN_PROJECTBASEDIR="$(cd "$(dirname "$0")" && pwd)"
 MAVEN_WRAPPERDIR="$MAVEN_PROJECTBASEDIR/.mvn/wrapper"
-MAVEN_PROPERTIES_FILE="$MAVEN_WRAPPERDIR/maven-wrapper.properties"
 
-# Read properties file
-if [ -f "$MAVEN_PROPERTIES_FILE" ]; then
-  distributionUrl="$(grep 'distributionUrl=' "$MAVEN_PROPERTIES_FILE" | cut -d'=' -f2- | tr -d '\r\n')"
-  wrapperUrl="$(grep 'wrapperUrl=' "$MAVEN_PROPERTIES_FILE" | cut -d'=' -f2- | tr -d '\r\n')"
-  wrapperVersion="$(grep 'wrapperVersion=' "$MAVEN_PROPERTIES_FILE" | cut -d'=' -f2- | tr -d '\r\n')"
+# Read distribution URL from properties
+if [ -f "$MAVEN_WRAPPERDIR/maven-wrapper.properties" ]; then
+  distributionUrl="$(grep 'distributionUrl=' "$MAVEN_WRAPPERDIR/maven-wrapper.properties" | sed 's/distributionUrl=//' | tr -d '\r\n')"
 fi
-
-# Default values
 : "${distributionUrl:="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip"}"
 
-MAVEN_HOME="${MAVEN_HOME:-"${HOME}/.m2/wrapper/dists/apache-maven-${distributionUrl##*apache-maven-}"}"
-MAVEN_HOME="${MAVEN_HOME%%-bin*}"
+# Extract version from URL
+MVN_VERSION="$(echo "$distributionUrl" | sed 's|.*apache-maven-\([0-9.]*\)-bin\.zip|\1|')"
 
-if [ -x "$MAVEN_HOME/bin/mvn" ]; then
-  verbose "Found existing Maven installation at $MAVEN_HOME"
+# If mvn is already on PATH, use it
+if command -v mvn > /dev/null 2>&1; then
+  exec mvn "$@"
+fi
+
+# Determine java command
+if [ -n "${JAVA_HOME-}" ]; then
+  JAVA_CMD="$JAVA_HOME/bin/java"
+  if [ ! -x "$JAVA_CMD" ]; then
+    echo "ERROR: JAVA_HOME is set to '$JAVA_HOME' but '$JAVA_CMD' is not executable." >&2
+    exit 1
+  fi
 else
-  echo "Downloading Maven from: $distributionUrl"
-
-  # Create temp dir for download
-  if TMP_DOWNLOAD_DIR="$(mktemp -d)" && [ -d "$TMP_DOWNLOAD_DIR" ]; then
-    clean() { rm -rf -- "$TMP_DOWNLOAD_DIR"; }
-    trap clean HUP INT TERM EXIT
-  else
-    echo "Cannot create temp dir" >&2
+  JAVA_CMD="$(command -v java 2>/dev/null)" || true
+  if [ ! -x "${JAVA_CMD-}" ]; then
+    echo "ERROR: java not found in PATH and JAVA_HOME is not set." >&2
     exit 1
   fi
+fi
 
-  TMP_FILE="$TMP_DOWNLOAD_DIR/maven.zip"
+# Install location
+MAVEN_HOME="${HOME}/.m2/wrapper/dists/apache-maven-${MVN_VERSION}"
 
-  # Use curl or wget to download
+if [ ! -x "$MAVEN_HOME/bin/mvn" ]; then
+  echo "Downloading Maven ${MVN_VERSION}..."
+  echo "  from: $distributionUrl"
+
+  TMP_DIR="$(mktemp -d)"
+  trap 'rm -rf "$TMP_DIR"' EXIT INT TERM HUP
+
+  TMP_ZIP="$TMP_DIR/maven.zip"
+
   if command -v curl > /dev/null 2>&1; then
-    curl ${MVNW_VERBOSE:+"--progress-bar"} -fsSL -o "$TMP_FILE" "$distributionUrl" \
-      ${MVNW_USERNAME:+-u "$MVNW_USERNAME:$MVNW_PASSWORD"}
+    curl -fsSL -o "$TMP_ZIP" "$distributionUrl"
   elif command -v wget > /dev/null 2>&1; then
-    wget ${MVNW_VERBOSE:+"-v"} -q -O "$TMP_FILE" "$distributionUrl" \
-      ${MVNW_USERNAME:+--http-user="$MVNW_USERNAME" --http-password="$MVNW_PASSWORD"}
+    wget -q -O "$TMP_ZIP" "$distributionUrl"
   else
-    echo "Cannot find curl or wget to download Maven" >&2
+    echo "ERROR: Neither curl nor wget found." >&2
     exit 1
   fi
 
-  # Unzip
-  mkdir -p "${MAVEN_HOME%/*}"
+  echo "  Extracting..."
+
+  # Extract into TMP_DIR
   if command -v unzip > /dev/null 2>&1; then
-    unzip -q -o "$TMP_FILE" -d "$TMP_DOWNLOAD_DIR"
+    unzip -q -o "$TMP_ZIP" -d "$TMP_DIR"
   else
-    "$JAVA_CMD" -cp "$TMP_FILE" -jar "$TMP_FILE" -d "$TMP_DOWNLOAD_DIR" 2>/dev/null || {
-      echo "Cannot unzip Maven distribution" >&2
+    (cd "$TMP_DIR" && "$JAVA_CMD" -Djava.io.tmpdir="$TMP_DIR" -cp "$TMP_ZIP" sun.tools.jar.Main xf "$TMP_ZIP" 2>/dev/null) || {
+      echo "ERROR: Cannot extract (unzip not available)." >&2
       exit 1
     }
   fi
 
-  # Move to final location
-  mv "$TMP_DOWNLOAD_DIR"/apache-maven-*/ "$MAVEN_HOME" 2>/dev/null || \
-    cp -r "$TMP_DOWNLOAD_DIR"/apache-maven-*/ "$MAVEN_HOME"
+  # Find the extracted apache-maven-X.Y.Z directory
+  EXTRACTED_DIR=""
+  for d in "$TMP_DIR"/apache-maven-*; do
+    if [ -d "$d" ]; then
+      EXTRACTED_DIR="$d"
+      break
+    fi
+  done
 
-  clean || :
+  if [ -z "$EXTRACTED_DIR" ] || [ ! -d "$EXTRACTED_DIR/bin" ]; then
+    echo "ERROR: Extraction failed. Contents of temp dir:" >&2
+    ls -la "$TMP_DIR" >&2
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "$MAVEN_HOME")"
+  rm -rf "$MAVEN_HOME"
+  mv "$EXTRACTED_DIR" "$MAVEN_HOME"
+
+  echo "  Maven installed to: $MAVEN_HOME"
 fi
 
 exec "$MAVEN_HOME/bin/mvn" "$@"
