@@ -131,9 +131,9 @@ public class EmailService {
                 <style>
                     body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }
                     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                    .header { background: linear-gradient(135deg, #1e3a8a 0%%, #3b82f6 100%%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
                     .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; }
-                    .otp-box { background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); color: white; font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 20px 40px; border-radius: 10px; display: inline-block; margin: 20px 0; }
+                    .otp-box { background: linear-gradient(135deg, #d97706 0%%, #f59e0b 100%%); color: white; font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 20px 40px; border-radius: 10px; display: inline-block; margin: 20px 0; }
                     .footer { background: #1e293b; color: #94a3b8; padding: 20px; text-align: center; font-size: 12px; border-radius: 0 0 10px 10px; }
                     .warning { color: #dc2626; font-size: 12px; margin-top: 20px; }
                 </style>
