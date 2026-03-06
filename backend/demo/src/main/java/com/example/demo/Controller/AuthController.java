@@ -80,9 +80,9 @@ public class AuthController {
         // Save user
         userAll.save(newUser);
         
-        // Send verification OTP email
+        // Send verification OTP email asynchronously (non-blocking)
         String userName = newUser.getFirstName() != null ? newUser.getFirstName() : "User";
-        emailService.sendOTPEmail(user.getEmail(), otp, userName);
+        emailService.sendOTPEmailAsync(user.getEmail(), otp, userName);
         
         // Return response indicating verification needed
         Map<String, Object> response = new HashMap<>();
@@ -132,7 +132,7 @@ public class AuthController {
                 userAll.save(user);
                 
                 String userName = user.getFirstName() != null ? user.getFirstName() : "User";
-                emailService.sendOTPEmail(user.getEmail(), otp, userName);
+                emailService.sendOTPEmailAsync(user.getEmail(), otp, userName);
                 response.put("otpSent", true);
             }
             

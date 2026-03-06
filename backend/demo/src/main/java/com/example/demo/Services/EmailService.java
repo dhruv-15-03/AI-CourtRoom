@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import java.security.SecureRandom;
+import org.springframework.scheduling.annotation.Async;
 
 /**
  * Email service for sending OTP and verification emails
@@ -37,7 +38,15 @@ public class EmailService {
     }
 
     /**
-     * Send OTP email for verification
+     * Send OTP email asynchronously (non-blocking) - use for signup
+     */
+    @Async
+    public void sendOTPEmailAsync(String toEmail, String otp, String userName) {
+        sendOTPEmail(toEmail, otp, userName);
+    }
+
+    /**
+     * Send OTP email for verification (synchronous)
      */
     public boolean sendOTPEmail(String toEmail, String otp, String userName) {
         if (mailSender == null) {
