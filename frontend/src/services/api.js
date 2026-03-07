@@ -231,16 +231,20 @@ export const aiService = {
   // ============== Core Analysis Endpoints ==============
   
   /**
-   * Primary case analysis with full details
+   * Primary case analysis with full details - NOW WITH SUBSCRIPTION AWARENESS
+   * Uses backend proxy that enriches response based on user's subscription plan
+   * FREE: Basic prediction only
+   * BASIC/PRO: Prediction + limited key factors
+   * UNLIMITED: Full details with all factors, explanations, and implications
    * Rate Limit: 30/minute
    */
-  analyzeCase: (caseData) => aiApi.post('/analyze', caseData),
+  analyzeCase: (caseData) => api.post('/api/ai-analysis/analyze', caseData),
   
   /**
    * Quick analysis for high-throughput scenarios
    * Rate Limit: 60/minute
    */
-  analyzeQuick: (text, caseType = null) => aiApi.post('/analyze/quick', { 
+  analyzeQuick: (text, caseType = null) => api.post('/api/ai-analysis/analyze/quick', { 
     text, 
     ...(caseType && { case_type: caseType }) 
   }),
@@ -301,9 +305,9 @@ export const aiService = {
   // ============== Monitoring & Health ==============
   
   /**
-   * Health check and model status
+   * Health check and model status - via backend proxy
    */
-  checkHealth: () => aiApi.get('/health'),
+  checkHealth: () => api.get('/api/ai-analysis/health'),
   
   /**
    * Model metadata, version, and classes
