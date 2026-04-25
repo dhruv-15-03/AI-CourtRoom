@@ -8,6 +8,9 @@ import HistoryIcon from "@mui/icons-material/History"
 import PersonIcon from "@mui/icons-material/Person"
 import Brightness4Icon from "@mui/icons-material/Brightness4"
 import ChatIcon from "@mui/icons-material/Chat"
+import EventIcon from "@mui/icons-material/Event"
+import PolicyIcon from "@mui/icons-material/Policy"
+import SchoolIcon from "@mui/icons-material/School"
 import { useNavigate, useLocation } from "react-router-dom"
 
 export default function JudgeSidebar({ mode, setMode, variant = "permanent", open, onClose, drawerWidth = 280, sx = {} }) {
@@ -17,8 +20,11 @@ export default function JudgeSidebar({ mode, setMode, variant = "permanent", ope
   const menuItems = [
     { path: "/judge/dashboard", label: "Dashboard", icon: <DashboardIcon /> },
     { path: "/judge/pending-cases", label: "Pending Cases", icon: <AssignmentIcon /> },
+    { path: "/judge/hearings", label: "Hearings", icon: <EventIcon /> },
     { path: "/judge/chats", label: "Chats", icon: <ChatIcon /> },
     { path: "/judge/judgments", label: "Judgments", icon: <HistoryIcon /> },
+    { path: "/judge/active-learning", label: "AI Review", icon: <SchoolIcon /> },
+    { path: "/judge/audit", label: "Audit Log", icon: <PolicyIcon /> },
     { path: "/judge/profile", label: "Profile", icon: <PersonIcon /> },
   ]
 

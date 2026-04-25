@@ -21,14 +21,16 @@ public enum SubscriptionPlan {
     
     // Basic/Single Case - Pay per case ₹499
     BASIC(499.0, 0, 1, "Single Case", 
-        "Pay per case - Perfect for one-time legal queries",
+        "Full AI Lawyer for one case - Upload docs, get analysis, draft court documents",
         true, // isSingleCase
         Arrays.asList(
-            "1 detailed case analysis",
-            "Full context prediction",
-            "Case outcome probability",
-            "Key factors breakdown",
-            "Similar case references",
+            "1 complete AI Lawyer session",
+            "Upload & analyze case documents (PDF, images, scans)",
+            "Full legal analysis with precedents",
+            "Unlimited follow-up questions for this case",
+            "Generate court documents (bail apps, appeals, etc.)",
+            "Evidence photo analysis",
+            "Case outcome prediction with strategy",
             "Valid for 30 days"
         )),
     

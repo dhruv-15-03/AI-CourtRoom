@@ -10,6 +10,9 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle"
 import CaseIcon from "@mui/icons-material/FolderOpen"
 import Brightness4Icon from "@mui/icons-material/Brightness4"
 import StarIcon from "@mui/icons-material/Star"
+import BalanceIcon from "@mui/icons-material/Balance"
+import EventIcon from "@mui/icons-material/Event"
+import DescriptionIcon from "@mui/icons-material/Description"
 import { useNavigate, useLocation } from "react-router-dom"
 
 const Sidebar = memo(function Sidebar({ mode, setMode }) {
@@ -18,6 +21,8 @@ const Sidebar = memo(function Sidebar({ mode, setMode }) {
 
   const menuItems = useMemo(() => [
     { path: "/home", label: "Find a Lawyer", icon: <GavelIcon /> },
+    { path: "/ai-lawyer", label: "AI Lawyer", icon: <BalanceIcon /> },
+    { path: "/ai-lawyer/documents", label: "Document Drafter", icon: <DescriptionIcon /> },
     { path: "/ai-assistant", label: "AI Assistant", icon: <SmartToyIcon /> },
     { path: "/chatbot", label: "Legal Chatbot", icon: <ForumIcon /> },
     { path: "/cases", label: "Cases", icon: <CaseIcon /> },

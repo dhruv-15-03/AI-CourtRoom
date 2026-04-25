@@ -334,7 +334,193 @@ public class CaseController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
-    
+
+    // ===============================================================
+    // AI Outcome Tracking (Phase 2 — feedback loop for ML iterative learning)
+    // ===============================================================
+
+    /**
+     * Record the AI's predicted outcome at case filing time.
+     * Called by the Python agent (server-to-server) OR the frontend after /api/agent/analyze.
+     */
+    @PostMapping("/{id}/predicted-outcome")
+    public ResponseEntity<?> recordPredictedOutcome(
+            @PathVariable Integer id,
+            @RequestBody Map<String, Object> data) {
+        try {
+            Optional<Case> caseOpt = caseService.getCaseById(id);
+            if (caseOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            Case c = caseOpt.get();
+
+            String outcomeStr = (String) data.get("outcome");
+            if (outcomeStr == null || outcomeStr.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "outcome is required"));
+            }
+            Case.Outcome outcome;
+            try {
+                outcome = Case.Outcome.valueOf(outcomeStr.toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "invalid outcome",
+                        "allowed", java.util.Arrays.stream(Case.Outcome.values())
+                                .map(Enum::name).collect(Collectors.toList())));
+            }
+
+            c.setPredictedOutcome(outcome);
+            Object confObj = data.get("confidence");
+            if (confObj instanceof Number n) {
+                c.setPredictedConfidence(n.doubleValue());
+            }
+            Object modelObj = data.get("modelVersion");
+            if (modelObj instanceof String s) {
+                c.setPredictionModelVersion(s);
+            }
+            c.setPredictedAt(LocalDateTime.now());
+
+            caseService.updateCase(id, c);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Predicted outcome recorded",
+                    "predictedOutcome", outcome.name(),
+                    "predictedAt", c.getPredictedAt().toString()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Record the actual (ground-truth) outcome once the case is decided.
+     * This feeds the active-learning queue so the ML model can retrain.
+     */
+    @PostMapping("/{id}/actual-outcome")
+    public ResponseEntity<?> recordActualOutcome(
+            @PathVariable Integer id,
+            @RequestHeader("Authorization") String jwt,
+            @RequestBody Map<String, Object> data) {
+        try {
+            String email = JwtProvider.getEmailFromJwt(jwt);
+            User user = userRepository.searchByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+            }
+            boolean isJudge = Boolean.TRUE.equals(user.getIsJudge());
+            boolean isLawyer = Boolean.TRUE.equals(user.getIsLawyer());
+            if (!isJudge && !isLawyer) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "error", "Only judges or lawyers can record actual outcomes"));
+            }
+
+            Optional<Case> caseOpt = caseService.getCaseById(id);
+            if (caseOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            Case c = caseOpt.get();
+
+            String outcomeStr = (String) data.get("outcome");
+            Case.Outcome outcome;
+            try {
+                outcome = Case.Outcome.valueOf(outcomeStr.toUpperCase());
+            } catch (Exception ex) {
+                return ResponseEntity.badRequest().body(Map.of("error", "invalid outcome"));
+            }
+            c.setActualOutcome(outcome);
+            c.setActualOutcomeRecordedAt(LocalDateTime.now());
+            Object notesObj = data.get("notes");
+            if (notesObj instanceof String s) {
+                c.setOutcomeNotes(s);
+            }
+
+            caseService.updateCase(id, c);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Actual outcome recorded");
+            response.put("actualOutcome", outcome.name());
+            response.put("predictedOutcome",
+                    c.getPredictedOutcome() != null ? c.getPredictedOutcome().name() : null);
+            response.put("predictionCorrect",
+                    c.getPredictedOutcome() != null && c.getPredictedOutcome() == outcome);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Aggregate prediction-accuracy stats for AI model monitoring.
+     */
+    @GetMapping("/outcome-stats")
+    public ResponseEntity<?> outcomeStats() {
+        try {
+            List<Case> all = caseService.getAllCases();
+            long totalPredicted = all.stream().filter(c -> c.getPredictedOutcome() != null).count();
+            long totalRecorded = all.stream()
+                    .filter(c -> c.getPredictedOutcome() != null && c.getActualOutcome() != null)
+                    .count();
+            long correct = all.stream()
+                    .filter(c -> c.getPredictedOutcome() != null
+                            && c.getActualOutcome() != null
+                            && c.getPredictedOutcome() == c.getActualOutcome())
+                    .count();
+            double accuracy = totalRecorded == 0 ? 0.0 : (double) correct / totalRecorded;
+            return ResponseEntity.ok(Map.of(
+                    "totalPredicted", totalPredicted,
+                    "totalWithGroundTruth", totalRecorded,
+                    "correct", correct,
+                    "accuracy", accuracy
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Export cases with recorded actual outcomes for AI retraining.
+     * Intended to be polled by the Python AI service's outcome-sync job.
+     * Protected by an internal API key to keep it service-to-service only.
+     * Pass ?since=<epoch-seconds> to fetch only outcomes recorded after a point.
+     */
+    @GetMapping("/labeled-outcomes")
+    public ResponseEntity<?> labeledOutcomes(
+            @RequestHeader(value = "X-Internal-Key", required = false) String internalKey,
+            @RequestParam(value = "since", required = false) Long since) {
+        String expected = System.getenv("INTERNAL_API_KEY");
+        if (expected != null && !expected.isEmpty() && !expected.equals(internalKey)) {
+            return ResponseEntity.status(401).body(Map.of("error", "invalid internal key"));
+        }
+        try {
+            LocalDateTime sinceDt = since != null
+                    ? LocalDateTime.ofEpochSecond(since, 0, java.time.ZoneOffset.UTC)
+                    : null;
+            List<Map<String, Object>> out = caseService.getAllCases().stream()
+                    .filter(c -> c.getActualOutcome() != null)
+                    .filter(c -> sinceDt == null
+                            || (c.getActualOutcomeRecordedAt() != null
+                                && c.getActualOutcomeRecordedAt().isAfter(sinceDt)))
+                    .map(c -> {
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("id", c.getId());
+                        m.put("description", c.getDescription() != null ? c.getDescription() : "");
+                        m.put("title", c.getTitle() != null ? c.getTitle() : "");
+                        m.put("caseType", c.getCaseType() != null ? c.getCaseType().name() : "");
+                        m.put("actualOutcome", c.getActualOutcome().name());
+                        m.put("predictedOutcome",
+                                c.getPredictedOutcome() != null ? c.getPredictedOutcome().name() : null);
+                        m.put("outcomeNotes", c.getOutcomeNotes() != null ? c.getOutcomeNotes() : "");
+                        m.put("recordedAt",
+                                c.getActualOutcomeRecordedAt() != null
+                                        ? c.getActualOutcomeRecordedAt().toEpochSecond(java.time.ZoneOffset.UTC)
+                                        : null);
+                        return m;
+                    })
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(Map.of("count", out.size(), "cases", out));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/{id}/close")
     public ResponseEntity<?> closeCase(
             @PathVariable Integer id,

@@ -337,7 +337,170 @@ export const aiService = {
   chatWithAI: (message, conversationId) => aiApi.post('/chat', { message, conversationId }),
 };
 
-// ============== Confidence Level Helpers ==============
+// ============== AI Agent (Full AI Lawyer) Service ==============
+export const agentService = {
+  /**
+   * Full AI Lawyer analysis — ML prediction + LLM analysis + precedents + strategy
+   * Goes through Java proxy for subscription checks
+   */
+  analyze: (query, options = {}) => api.post('/api/agent/analyze', { query, ...options }),
+
+  /**
+   * Full analysis with uploaded documents — the complete AI Lawyer experience
+   * Supports multipart/form-data with files
+   * @param {string} query - Case description
+   * @param {File[]} files - Uploaded document files
+   * @param {string} documentsContext - Pre-processed doc text (from upload-documents)
+   */
+  analyzeWithDocs: (query, files = [], documentsContext = '') => {
+    const formData = new FormData();
+    formData.append('query', query);
+    if (documentsContext) formData.append('documents_context', documentsContext);
+    files.forEach(file => formData.append('files', file));
+    return api.post('/api/agent/analyze-with-docs', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    });
+  },
+
+  /**
+   * Follow-up chat within a case session — agent remembers full context
+   * @param {string} sessionId - Session UUID from analyze response
+   * @param {string} message - Follow-up question
+   */
+  chat: (sessionId, message) => api.post('/api/agent/chat', { session_id: sessionId, message }),
+
+  /**
+   * Upload documents for AI reading — OCR, text extraction, evidence analysis
+   * @param {File[]} files - Array of files (PDF, images, DOCX)
+   * @param {string} sessionId - Optional session to attach documents to
+   */
+  uploadDocuments: (files, sessionId = '') => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    if (sessionId) formData.append('session_id', sessionId);
+    return api.post('/api/agent/upload-documents', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    });
+  },
+
+  /**
+   * Generate court-ready legal documents (bail applications, appeals, etc.)
+   * @param {string} docType - Document type ID (e.g., 'bail_application')
+   * @param {object} params - { case_info, session_id, documents_context, user_instructions }
+   */
+  generateDocument: (docType, params = {}) => api.post('/api/agent/generate-document', {
+    doc_type: docType,
+    ...params,
+  }),
+
+  /**
+   * List available court document types the AI can draft
+   */
+  getDocumentTypes: () => api.get('/api/agent/document-types'),
+
+  /**
+   * Get session info (conversation history, case context)
+   */
+  getSession: (sessionId) => api.get(`/api/agent/session/${sessionId}`),
+
+  /**
+   * Agent health check
+   */
+  checkHealth: () => api.get('/api/agent/health'),
+
+  /**
+   * Stream a response token-by-token via Server-Sent Events.
+   *
+   * Hits the Python agent directly (AI_API_URL) to avoid proxy buffering.
+   * Caller supplies event handlers; the returned function can be invoked to
+   * abort the request.
+   *
+   * @param {{query: string, sessionId?: string, kCases?: number, kStatutes?: number}} params
+   * @param {{onStatus?: Function, onCitations?: Function, onToken?: Function,
+   *          onDone?: Function, onError?: Function}} handlers
+   * @returns {() => void} abort function
+   */
+  stream: (params, handlers = {}) => {
+    const controller = new AbortController();
+    const base = (AI_API_URL || '').replace(/\/api\/?$/, '');
+    const url = `${base}/api/agent/stream`;
+
+    (async () => {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: params.query,
+            session_id: params.sessionId,
+            k_cases: params.kCases ?? 5,
+            k_statutes: params.kStatutes ?? 5,
+          }),
+        });
+        if (!res.ok || !res.body) {
+          throw new Error(`stream failed: HTTP ${res.status}`);
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        // SSE frames are separated by a blank line
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buffer.indexOf('\n\n')) !== -1) {
+            const frame = buffer.slice(0, idx);
+            buffer = buffer.slice(idx + 2);
+            const evtMatch = frame.match(/^event:\s*(.+)$/m);
+            const dataLines = [...frame.matchAll(/^data:\s?(.*)$/gm)].map(m => m[1]);
+            if (!evtMatch || dataLines.length === 0) continue;
+            const evt = evtMatch[1].trim();
+            let payload;
+            try { payload = JSON.parse(dataLines.join('\n')); } catch { payload = { raw: dataLines.join('\n') }; }
+            if (evt === 'status') handlers.onStatus?.(payload);
+            else if (evt === 'citations') handlers.onCitations?.(payload);
+            else if (evt === 'token') handlers.onToken?.(payload);
+            else if (evt === 'done') handlers.onDone?.(payload);
+            else if (evt === 'error') handlers.onError?.(payload);
+          }
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') handlers.onError?.({ message: err.message });
+      }
+    })();
+
+    return () => controller.abort();
+  },
+};
+
+// ============== Active Learning (Phase 3 — human-in-the-loop labeling) ==============
+// These endpoints live on the Python AI service. They're exposed to admins/judges
+// for reviewing low-confidence predictions and supplying ground-truth labels.
+export const activeLearningService = {
+  getQueue: () => aiApi.get('/api/active_learning/queue'),
+  addToQueue: (payload) => aiApi.post('/api/active_learning/queue', payload),
+  label: (itemId, { label, labeler }) =>
+    aiApi.post(`/api/active_learning/queue/${itemId}`, { label, labeler }),
+  suggestLabel: (text) => aiApi.post('/api/active_learning/suggest_label', { text }),
+  retrain: () => aiApi.post('/api/active_learning/retrain', {}),
+  stats: () => aiApi.get('/api/active_learning/stats'),
+  syncOutcomes: (opts = {}) => aiApi.post('/api/active_learning/sync_outcomes', opts),
+};
+
+// ============== Case Outcome Tracking (Phase 2 — ML feedback loop) ==============
+export const outcomeService = {
+  recordPredicted: (caseId, { outcome, confidence, modelVersion }) =>
+    api.post(`/api/cases/${caseId}/predicted-outcome`, {
+      outcome, confidence, modelVersion,
+    }),
+  recordActual: (caseId, { outcome, notes }) =>
+    api.post(`/api/cases/${caseId}/actual-outcome`, { outcome, notes }),
+  stats: () => api.get('/api/cases/outcome-stats'),
+};
 
 /**
  * Get confidence display information based on score
@@ -396,6 +559,31 @@ export const PREDICTION_OUTCOMES = [
 /**
  * Case types supported by the API
  */
+// ============== Hearing Management (Phase 4 — Court Integration) ==============
+export const hearingService = {
+  schedule: (data) => api.post('/api/hearings', data),
+  get: (id) => api.get(`/api/hearings/${id}`),
+  getForCase: (caseId) => api.get(`/api/hearings/case/${caseId}`),
+  upcoming: () => api.get('/api/hearings/upcoming'),
+  byDate: (date) => api.get(`/api/hearings/date/${date}`),
+  update: (id, data) => api.put(`/api/hearings/${id}`, data),
+  adjourn: (id, data) => api.post(`/api/hearings/${id}/adjourn`, data),
+  complete: (id, data) => api.post(`/api/hearings/${id}/complete`, data),
+  calendarStats: (from, to) => api.get('/api/hearings/calendar-stats', { params: { from, to } }),
+  roomAvailability: (courtRoom, date) =>
+    api.get('/api/hearings/room-availability', { params: { courtRoom, date } }),
+};
+
+// ============== Audit Log (Phase 4 — Court Integration) ==============
+export const auditService = {
+  // Java backend audit (full case/user actions)
+  getLog: (page = 0, size = 50) => api.get('/api/audit', { params: { page, size } }),
+  getEntityTrail: (type, id) => api.get(`/api/audit/entity/${type}/${id}`),
+  getByRange: (from, to) => api.get('/api/audit/range', { params: { from, to } }),
+  // Python AI audit (analysis, doc gen, retrain events)
+  getAILog: (limit = 200) => aiApi.get('/api/audit/ai', { params: { limit } }),
+};
+
 export const CASE_TYPES = ['Criminal', 'Civil', 'Labor', 'Family'];
 
 export default api;

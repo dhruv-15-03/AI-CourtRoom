@@ -14,10 +14,16 @@ import Sidebar from './components/Sidebar';
 import { FullScreenLoader } from './components/common/UIComponents';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
+// Judge Components
+import JudgeLayout from './components/JudgeLayout';
+
 // Lazy load pages for performance optimization
 const FindLawyer = React.lazy(() => import('./pages/FindLawyer'));
 const AIAssistant = React.lazy(() => import('./pages/AIAssistant'));
 const AIQuestionare = React.lazy(() => import('./pages/AIQuestionare.jsx'));
+const AILawyer = React.lazy(() => import('./pages/AILawyer'));
+const AILawyerChat = React.lazy(() => import('./pages/AILawyerChat'));
+const DocumentGenerator = React.lazy(() => import('./pages/DocumentGenerator'));
 const Chatbot = React.lazy(() => import('./pages/Chatbot'));
 const ChatPage = React.lazy(() => import('./pages/ChatPage'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
@@ -26,14 +32,17 @@ const SubscriptionPage = React.lazy(() => import('./pages/SubscriptionPage'));
 // Lawyer Routes
 const LawyerRoutes = React.lazy(() => import('./routes/LawyerRoutes'));
 
-// Judge Components
-import JudgeLayout from './components/JudgeLayout';
+// Judge Pages
 const JudgeDashboard = React.lazy(() => import('./pages/judge/JudgeDashboard.jsx'));
 const PendingCases = React.lazy(() => import('./pages/judge/PendingCases.jsx'));
 const JudgeCaseDetails = React.lazy(() => import('./pages/judge/CaseDetails.jsx'));
 const Judgments = React.lazy(() => import('./pages/judge/Judgments.jsx'));
 const JudgeProfile = React.lazy(() => import('./pages/judge/JudgeProfile.jsx'));
 const JudgeChats = React.lazy(() => import('./pages/judge/Chats.jsx'));
+const ActiveLearningReview = React.lazy(() => import('./pages/judge/ActiveLearningReview.jsx'));
+const JudgeHearings = React.lazy(() => import('./pages/judge/JudgeHearings.jsx'));
+const JudgeAuditLog = React.lazy(() => import('./pages/judge/JudgeAuditLog.jsx'));
+const VirtualCourtroom = React.lazy(() => import('./pages/judge/VirtualCourtroom.jsx'));
 
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
@@ -191,6 +200,9 @@ function AppContent() {
                       <Route path="/my-profile" element={<ProfilePage />} />
                       <Route path="/chats" element={<ChatPage />} />
                       <Route path="/ai-chat" element={<AIQuestionare />} />
+                      <Route path="/ai-lawyer" element={<AILawyer />} />
+                      <Route path="/ai-lawyer/chat" element={<AILawyerChat />} />
+                      <Route path="/ai-lawyer/documents" element={<DocumentGenerator />} />
                       <Route path="/subscription" element={<SubscriptionPage />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
                     </>
@@ -214,6 +226,10 @@ function AppContent() {
                       <Route path="pending-cases" element={<PendingCases />} />
                       <Route path="case-details/:id" element={<JudgeCaseDetails />} />
                       <Route path="judgments" element={<Judgments />} />
+                      <Route path="active-learning" element={<ActiveLearningReview />} />
+                      <Route path="hearings" element={<JudgeHearings />} />
+                      <Route path="audit" element={<JudgeAuditLog />} />
+                      <Route path="virtual-courtroom/:hearingId" element={<VirtualCourtroom />} />
                       <Route path="profile" element={<JudgeProfile />} />
                       <Route path="*" element={<Navigate to="dashboard" replace />} />
                     </Route>

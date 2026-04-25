@@ -99,6 +99,21 @@ public class Case {
     private String disposalType; // JUDGMENT, SETTLEMENT, WITHDRAWAL, etc.
     private Boolean appealFiled;
     private String appealDetails;
+
+    // ==========================================================
+    // AI Outcome Tracking (Phase 2 — feedback loop for ML)
+    // ==========================================================
+    @Enumerated(EnumType.STRING)
+    private Outcome predictedOutcome;        // what the AI predicted at filing time
+    private Double predictedConfidence;      // 0.0–1.0
+    private LocalDateTime predictedAt;
+    private String predictionModelVersion;   // e.g. "rf-v2-2026-04"
+
+    @Enumerated(EnumType.STRING)
+    private Outcome actualOutcome;           // ground truth once the case is closed
+    private LocalDateTime actualOutcomeRecordedAt;
+    @Column(length = 2000)
+    private String outcomeNotes;             // optional human notes (why the AI was wrong / right)
     
     // Financial
     private Double courtFees;
@@ -211,6 +226,33 @@ public class Case {
             this.displayName = displayName;
         }
         
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
+    /**
+     * Canonical outcome labels used by the AI agent and the feedback loop.
+     * Must stay aligned with the Python ML classifier labels.
+     */
+    public enum Outcome {
+        GRANTED("Granted / Allowed"),
+        DISMISSED("Dismissed"),
+        ACQUITTED("Acquitted"),
+        CONVICTED("Convicted"),
+        SETTLED("Settled"),
+        WITHDRAWN("Withdrawn"),
+        PARTIAL_RELIEF("Partial Relief"),
+        REMANDED("Remanded"),
+        PENDING("Pending"),
+        UNKNOWN("Unknown");
+
+        private final String displayName;
+
+        Outcome(String displayName) {
+            this.displayName = displayName;
+        }
+
         public String getDisplayName() {
             return displayName;
         }
