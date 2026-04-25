@@ -16,8 +16,12 @@ import {
   Alert,
   alpha,
 } from "@mui/material";
-import { Send, Stop, Gavel, AutoAwesome, MenuBook } from "@mui/icons-material";
+import { Send, Stop, Gavel, AutoAwesome, MenuBook, ThumbUp, ThumbDown } from "@mui/icons-material";
 import { agentService } from "../services/api";
+
+const LEGAL_DISCLAIMER =
+  "This AI assistant provides legal research support only — it does NOT constitute legal advice. " +
+  "No attorney-client relationship is created. Always consult a qualified lawyer before acting on AI-generated analysis.";
 
 /**
  * AILawyerChat — streaming legal consultation with the AI agent.
@@ -150,6 +154,9 @@ export default function AILawyerChat() {
           </Box>
         </Box>
       </Paper>
+      <Alert severity="warning" sx={{ mb: 2, fontSize: 12 }} icon={<Gavel fontSize="small" />}>
+        {LEGAL_DISCLAIMER}
+      </Alert>
 
       {error && <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -243,6 +250,18 @@ function MessageBubble({ message }) {
           <Typography variant="caption" sx={{ opacity: 0.6, display: "block", mt: 1 }}>
             {message.meta.model} · {message.meta.provider} · {message.meta.elapsed_seconds}s · {message.meta.citation_count} precedents
           </Typography>
+        )}
+        {!isUser && message.text && !message.pending && (
+          <Box sx={{ display: "flex", gap: 0.5, mt: 1, justifyContent: "flex-end" }}>
+            <IconButton size="small" title="Helpful"
+              onClick={() => console.log("feedback:helpful", message.text?.slice(0, 50))}>
+              <ThumbUp sx={{ fontSize: 14 }} />
+            </IconButton>
+            <IconButton size="small" title="Not helpful"
+              onClick={() => console.log("feedback:not-helpful", message.text?.slice(0, 50))}>
+              <ThumbDown sx={{ fontSize: 14 }} />
+            </IconButton>
+          </Box>
         )}
       </Paper>
     </Box>

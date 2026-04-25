@@ -81,11 +81,15 @@ export default function DocumentGenerator() {
         <GavelIcon color="primary" />
         <Typography variant="h4" fontWeight={700}>AI Document Drafter</Typography>
       </Stack>
-      <Typography variant="body2" color="text.secondary" mb={3}>
+      <Typography variant="body2" color="text.secondary" mb={1}>
         Generate court-ready Indian legal documents — bail applications, appeals,
         writ petitions, replies and more. Based on the AI Lawyer's analysis of
         your case.
       </Typography>
+      <Alert severity="warning" sx={{ mb: 3, fontSize: 12 }} icon={<GavelIcon fontSize="small" />}>
+        AI-generated documents are drafts only. They must be reviewed and modified by a qualified
+        legal professional before filing with any court. No attorney-client relationship is created.
+      </Alert>
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Stack spacing={2}>
