@@ -477,6 +477,19 @@ export const agentService = {
   },
 };
 
+// ============== User Feedback (was this helpful?) ==============
+export const feedbackService = {
+  submit: ({ responseType, helpful, queryExcerpt, sessionId, comment }) =>
+    aiApi.post('/api/feedback', {
+      response_type: responseType,
+      helpful,
+      query_excerpt: queryExcerpt,
+      session_id: sessionId,
+      comment,
+    }),
+  stats: () => aiApi.get('/api/feedback/stats'),
+};
+
 // ============== Active Learning (Phase 3 — human-in-the-loop labeling) ==============
 // These endpoints live on the Python AI service. They're exposed to admins/judges
 // for reviewing low-confidence predictions and supplying ground-truth labels.

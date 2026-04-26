@@ -50,6 +50,7 @@ const VerificationPage = React.lazy(() => import('./pages/VerificationPage'));
 const Cases = React.lazy(() => import('./pages/Cases.jsx'));
 const CreateCase = React.lazy(() => import('./pages/CreateCase.jsx'));
 const CaseDetails = React.lazy(() => import('./pages/CaseDetails.jsx'));
+const NotFound = React.lazy(() => import('./pages/NotFound.jsx'));
 
 function AppContent() {
   const [mode, setMode] = useState(localStorage.getItem('theme') || 'light');
@@ -237,13 +238,8 @@ function AppContent() {
                     </>
                   )}
 
-                  {/* Redirect based on role for any unmatched route */}
-                  <Route path="*" element={
-                    <Navigate to={
-                      userRole === 'lawyer' ? '/lawyer/dashboard' :
-                      userRole === 'judge' ? '/judge/dashboard' : '/home'
-                    } replace />
-                  } />
+                  {/* 404 for any unmatched route */}
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </React.Suspense>
             </div>

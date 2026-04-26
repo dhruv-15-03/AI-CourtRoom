@@ -17,7 +17,7 @@ import {
   alpha,
 } from "@mui/material";
 import { Send, Stop, Gavel, AutoAwesome, MenuBook, ThumbUp, ThumbDown } from "@mui/icons-material";
-import { agentService } from "../services/api";
+import { agentService, feedbackService } from "../services/api";
 
 const LEGAL_DISCLAIMER =
   "This AI assistant provides legal research support only — it does NOT constitute legal advice. " +
@@ -254,11 +254,17 @@ function MessageBubble({ message }) {
         {!isUser && message.text && !message.pending && (
           <Box sx={{ display: "flex", gap: 0.5, mt: 1, justifyContent: "flex-end" }}>
             <IconButton size="small" title="Helpful"
-              onClick={() => console.log("feedback:helpful", message.text?.slice(0, 50))}>
+              onClick={() => feedbackService.submit({
+                responseType: 'chat', helpful: true,
+                queryExcerpt: (message.text || '').slice(0, 100),
+              }).catch(() => {})}>
               <ThumbUp sx={{ fontSize: 14 }} />
             </IconButton>
             <IconButton size="small" title="Not helpful"
-              onClick={() => console.log("feedback:not-helpful", message.text?.slice(0, 50))}>
+              onClick={() => feedbackService.submit({
+                responseType: 'chat', helpful: false,
+                queryExcerpt: (message.text || '').slice(0, 100),
+              }).catch(() => {})}>
               <ThumbDown sx={{ fontSize: 14 }} />
             </IconButton>
           </Box>
