@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Button, Container, Typography, Card, CardContent } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { captureException } from '../../utils/monitoring';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -15,8 +16,13 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log the error to console (in production, send to error tracking service)
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Report to the monitoring backend (no-op without a DSN) and keep a
+    // dev-only console trace.
+    captureException(error, { componentStack: errorInfo?.componentStack });
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.error('ErrorBoundary caught an error:', error, errorInfo);
+    }
     this.setState({ error, errorInfo });
   }
 
