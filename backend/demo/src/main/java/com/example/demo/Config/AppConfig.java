@@ -12,6 +12,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.web.client.RestTemplate;
@@ -25,7 +27,8 @@ import java.util.Arrays;
 import java.util.List;
 
 @Configuration
-//@EnableWebSecurity
+@EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class AppConfig implements WebMvcConfigurer {
     
     @Override
@@ -49,8 +52,16 @@ public class AppConfig implements WebMvcConfigurer {
                 .requestMatchers("/api/verification/**").permitAll()
                 .requestMatchers("/api/subscription/plans").permitAll()
                 .requestMatchers("/api/subscription/webhook").permitAll()
+                // Infrastructure endpoints that must stay reachable without a JWT:
+                // Render's health probe, the WebSocket/SockJS handshake and the
+                // Spring error dispatch path.
+                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/ws/**").permitAll()
+                .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/**").authenticated()
-                .anyRequest().permitAll())
+                // Anything not matched above now requires authentication instead
+                // of being silently public.
+                .anyRequest().authenticated())
                 .addFilterBefore(new JwtValidator(), BasicAuthenticationFilter.class)
                 .csrf(csrf -> csrf.disable())
                 .cors(cors-> cors.configurationSource(corsConfigurationSource()));

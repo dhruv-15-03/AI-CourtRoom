@@ -13,7 +13,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class JwtValidator extends OncePerRequestFilter {
@@ -33,7 +32,7 @@ public class JwtValidator extends OncePerRequestFilter {
         if (jwt != null) {
             try {
                 String email = JwtProvider.getEmailFromJwt(jwt);
-                List<GrantedAuthority> authorities = new ArrayList<>();
+                List<GrantedAuthority> authorities = JwtProvider.getAuthoritiesFromJwt(jwt);
                 Authentication authentication = new UsernamePasswordAuthenticationToken(email, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (Exception e) {

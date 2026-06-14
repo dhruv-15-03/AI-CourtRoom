@@ -7,6 +7,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +25,8 @@ import java.util.Map;
  */
 @Service
 public class FirebaseService {
+
+    private static final Logger logger = LoggerFactory.getLogger(FirebaseService.class);
 
     @Value("${firebase.credentials.path:}")
     private String firebaseCredentialsPath;
@@ -49,7 +53,7 @@ public class FirebaseService {
                             .build();
                     FirebaseApp.initializeApp(options);
                     initialized = true;
-                    System.out.println("Firebase initialized with credentials JSON");
+                    logger.info("Firebase initialized with credentials JSON");
                 } else if (firebaseCredentialsPath != null && !firebaseCredentialsPath.isEmpty()) {
                     // Use file path
                     options = FirebaseOptions.builder()
@@ -58,16 +62,16 @@ public class FirebaseService {
                             .build();
                     FirebaseApp.initializeApp(options);
                     initialized = true;
-                    System.out.println("Firebase initialized with credentials file");
+                    logger.info("Firebase initialized with credentials file");
                 } else {
-                    System.out.println("Firebase credentials not configured - running in development mode");
+                    logger.warn("Firebase credentials not configured - running in development mode");
                     initialized = false;
                 }
             } else {
                 initialized = true;
             }
         } catch (IOException e) {
-            System.err.println("Failed to initialize Firebase: " + e.getMessage());
+            logger.error("Failed to initialize Firebase", e);
             initialized = false;
         }
     }
@@ -80,7 +84,7 @@ public class FirebaseService {
     public Map<String, String> verifyPhoneToken(String idToken) {
         if (!initialized) {
             // Development mode - accept any token and return mock data
-            System.out.println("[DEV MODE] Firebase phone verification - accepting token");
+            logger.warn("Firebase not configured; accepting phone token without verification (development mode).");
             Map<String, String> result = new HashMap<>();
             result.put("uid", "dev_" + System.currentTimeMillis());
             result.put("phoneNumber", "+91XXXXXXXXXX");
@@ -93,7 +97,7 @@ public class FirebaseService {
             String phoneNumber = (String) decodedToken.getClaims().get("phone_number");
 
             if (phoneNumber == null) {
-                System.err.println("Token does not contain phone number");
+                logger.warn("Firebase token does not contain a phone number");
                 return null;
             }
 
@@ -102,7 +106,7 @@ public class FirebaseService {
             result.put("phoneNumber", phoneNumber);
             return result;
         } catch (FirebaseAuthException e) {
-            System.err.println("Failed to verify Firebase token: " + e.getMessage());
+            logger.error("Failed to verify Firebase token", e);
             return null;
         }
     }

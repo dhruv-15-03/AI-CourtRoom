@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logger } from '../utils/monitoring';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
 const AI_API_URL = process.env.REACT_APP_AI_API_URL || 'https://ai-court-ai.onrender.com/api';
@@ -36,7 +37,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', {
+    logger.error('API Error:', {
       url: error.config?.url,
       method: error.config?.method,
       status: error.response?.status,
@@ -67,7 +68,7 @@ api.interceptors.response.use(
           error.response.data.message.includes('Unauthorized') ||
           error.response.data.message.includes('expired')))) {
       
-      console.warn('JWT token invalid or expired, redirecting to login...');
+      logger.warn('JWT token invalid or expired, redirecting to login...');
       
       // Clear all auth data
       localStorage.removeItem('authToken');
@@ -100,7 +101,7 @@ export const authService = {
       
       return { success: true, message: 'Logged out successfully' };
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
       localStorage.removeItem('authToken');
       localStorage.removeItem('userRole');
       localStorage.removeItem('userProfile');

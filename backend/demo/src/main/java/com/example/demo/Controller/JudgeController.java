@@ -6,6 +6,7 @@ import com.example.demo.Repository.CaseAll;
 import com.example.demo.Repository.UserAll;
 import com.example.demo.Config.JwtProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/judge")
+@PreAuthorize("hasRole('JUDGE')")
 @CrossOrigin(origins = {"http://localhost:3000", "https://ai-court-room-iota.vercel.app", "https://ai-courtroom.vercel.app"})
 public class JudgeController {
     
