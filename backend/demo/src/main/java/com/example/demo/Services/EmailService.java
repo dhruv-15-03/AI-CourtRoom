@@ -1,5 +1,7 @@
 package com.example.demo.Services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -17,6 +19,8 @@ import org.springframework.scheduling.annotation.Async;
  */
 @Service
 public class EmailService {
+
+    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
 
     @Autowired(required = false)
     private JavaMailSender mailSender;
@@ -50,7 +54,7 @@ public class EmailService {
      */
     public boolean sendOTPEmail(String toEmail, String otp, String userName) {
         if (mailSender == null) {
-            System.out.println("[DEV MODE] Email OTP for " + toEmail + ": " + otp);
+            logger.warn("Mail sender not configured; OTP for {} was generated but not emailed (development mode).", toEmail);
             return true; // Development mode - no mail sender configured
         }
 
@@ -68,7 +72,7 @@ public class EmailService {
             mailSender.send(message);
             return true;
         } catch (MessagingException e) {
-            System.err.println("Failed to send OTP email: " + e.getMessage());
+            logger.error("Failed to send OTP email to {}", toEmail, e);
             return false;
         }
     }
@@ -78,7 +82,7 @@ public class EmailService {
      */
     public boolean sendSimpleEmail(String toEmail, String subject, String body) {
         if (mailSender == null) {
-            System.out.println("[DEV MODE] Email to " + toEmail + ": " + subject);
+            logger.warn("Mail sender not configured; email to {} ('{}') was not sent (development mode).", toEmail, subject);
             return true;
         }
 
@@ -91,7 +95,7 @@ public class EmailService {
             mailSender.send(message);
             return true;
         } catch (Exception e) {
-            System.err.println("Failed to send email: " + e.getMessage());
+            logger.error("Failed to send email to {}", toEmail, e);
             return false;
         }
     }

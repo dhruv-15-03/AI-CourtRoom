@@ -1,5 +1,7 @@
 package com.example.demo.Config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.NonNull;
 import org.springframework.messaging.Message;
@@ -21,6 +23,9 @@ import java.util.List;
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
+
     @Override
     public void registerStompEndpoints(@NonNull StompEndpointRegistry registry){
         registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
@@ -53,7 +58,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                             }
                         } catch (Exception e) {
                             // Token validation failed
-                            System.out.println("WebSocket authentication failed: " + e.getMessage());
+                            logger.debug("WebSocket authentication failed: {}", e.getMessage());
                         }
                     }
                 }
