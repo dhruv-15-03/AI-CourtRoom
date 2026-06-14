@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.*;
 
 @RestController
@@ -34,6 +36,9 @@ public class SubscriptionController {
     
     @Value("${razorpay.key.secret:}")
     private String razorpayKeySecret;
+
+    @Value("${razorpay.webhook.secret:}")
+    private String razorpayWebhookSecret;
     
     /**
      * Get all available subscription plans
@@ -247,35 +252,33 @@ public class SubscriptionController {
                 ));
             }
             
-            // Development mode - skip signature verification
-            if (razorpayKeySecret == null || razorpayKeySecret.isEmpty() || 
-                orderId.startsWith("order_")) {
-                Subscription subscription = subscriptionService.activateSubscription(
-                    orderId, paymentId, signature, paymentMethod != null ? paymentMethod : "test"
-                );
-                
-                return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Subscription activated successfully",
-                    "subscriptionId", subscription.getId(),
-                    "plan", subscription.getPlan().getDisplayName(),
-                    "validUntil", subscription.getEndDate()
-                ));
+            // Local-development convenience: skip signature verification ONLY when no
+            // Razorpay secret is configured (i.e. there is no real gateway to verify
+            // against). In every other case the signature MUST be verified.
+            boolean devMode = (razorpayKeySecret == null || razorpayKeySecret.isEmpty());
+
+            if (!devMode) {
+                if (signature == null || signature.isEmpty()) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Payment signature is required"
+                    ));
+                }
+                String generatedSignature = generateRazorpaySignature(orderId, paymentId, razorpayKeySecret);
+                boolean valid = MessageDigest.isEqual(
+                    generatedSignature.getBytes(StandardCharsets.UTF_8),
+                    signature.getBytes(StandardCharsets.UTF_8));
+                if (!valid) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Payment verification failed"
+                    ));
+                }
             }
-            
-            // Production mode - verify signature
-            String generatedSignature = generateRazorpaySignature(orderId, paymentId, razorpayKeySecret);
-            
-            if (!generatedSignature.equals(signature)) {
-                return ResponseEntity.badRequest().body(Map.of(
-                    "error", "Payment verification failed"
-                ));
-            }
-            
+
+            String method = paymentMethod != null ? paymentMethod : (devMode ? "test" : "razorpay");
             Subscription subscription = subscriptionService.activateSubscription(
-                orderId, paymentId, signature, paymentMethod
+                orderId, paymentId, signature, method
             );
-            
+
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "Subscription activated successfully",
@@ -360,12 +363,27 @@ public class SubscriptionController {
             @RequestHeader(value = "X-Razorpay-Signature", required = false) String signature,
             @RequestBody String payload) {
         try {
-            // Log webhook for debugging
-            System.out.println("Received Razorpay webhook: " + payload);
-            
-            // In production, verify webhook signature
-            // For now, just acknowledge receipt
-            
+            // Verify the webhook is genuinely from Razorpay before trusting any
+            // of its contents: HMAC-SHA256 of the raw body using the webhook
+            // secret must match the X-Razorpay-Signature header.
+            if (razorpayWebhookSecret == null || razorpayWebhookSecret.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", "Webhook verification not configured"));
+            }
+            if (signature == null || signature.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Missing webhook signature"));
+            }
+
+            String expected = hmacSha256Hex(payload, razorpayWebhookSecret);
+            boolean valid = MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.UTF_8),
+                signature.getBytes(StandardCharsets.UTF_8));
+            if (!valid) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid webhook signature"));
+            }
+
             return ResponseEntity.ok(Map.of("status", "received"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -375,16 +393,22 @@ public class SubscriptionController {
     }
     
     /**
-     * Generate Razorpay signature for verification
+     * Generate Razorpay payment signature (HMAC-SHA256 of "orderId|paymentId").
      */
     private String generateRazorpaySignature(String orderId, String paymentId, String secret) {
+        return hmacSha256Hex(orderId + "|" + paymentId, secret);
+    }
+
+    /**
+     * Compute a hex-encoded HMAC-SHA256 of the given data using the given secret.
+     */
+    private String hmacSha256Hex(String data, String secret) {
         try {
-            String data = orderId + "|" + paymentId;
             Mac sha256Hmac = Mac.getInstance("HmacSHA256");
-            SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
+            SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
             sha256Hmac.init(secretKey);
-            byte[] hash = sha256Hmac.doFinal(data.getBytes());
-            
+            byte[] hash = sha256Hmac.doFinal(data.getBytes(StandardCharsets.UTF_8));
+
             StringBuilder hexString = new StringBuilder();
             for (byte b : hash) {
                 String hex = Integer.toHexString(0xff & b);

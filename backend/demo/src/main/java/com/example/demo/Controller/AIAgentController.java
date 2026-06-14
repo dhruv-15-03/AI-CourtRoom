@@ -48,7 +48,25 @@ public class AIAgentController {
     @Value("${ai.service.url:https://ai-court-ai.onrender.com/api}")
     private String aiServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Value("${ai.service.api.key:}")
+    private String aiServiceApiKey;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    /** Add the shared X-API-Key header for authenticated calls to the Python AI service. */
+    private void applyAiAuth(HttpHeaders headers) {
+        if (aiServiceApiKey != null && !aiServiceApiKey.isBlank()) {
+            headers.set("X-API-Key", aiServiceApiKey);
+        }
+    }
+
+    /** Build a GET request entity carrying the AI service API key (if configured). */
+    private HttpEntity<Void> aiGetEntity() {
+        HttpHeaders headers = new HttpHeaders();
+        applyAiAuth(headers);
+        return new HttpEntity<>(headers);
+    }
 
     // ── Tier Mapping ─────────────────────────────────────────────────────
 
@@ -96,6 +114,7 @@ public class AIAgentController {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            applyAiAuth(headers);
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
             String endpoint = aiServiceUrl + "/agent/analyze";
@@ -150,6 +169,7 @@ public class AIAgentController {
             // Build multipart request for Python agent
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            applyAiAuth(headers);
 
             MultiValueMap<String, Object> formData = new LinkedMultiValueMap<>();
             formData.add("query", query);
@@ -216,6 +236,7 @@ public class AIAgentController {
             // Chat uses existing session — just forward to Python
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            applyAiAuth(headers);
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
             String endpoint = aiServiceUrl + "/agent/chat";
@@ -259,6 +280,7 @@ public class AIAgentController {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            applyAiAuth(headers);
 
             MultiValueMap<String, Object> formData = new LinkedMultiValueMap<>();
             if (sessionId != null) {
@@ -325,6 +347,7 @@ public class AIAgentController {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            applyAiAuth(headers);
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
             String endpoint = aiServiceUrl + "/agent/generate-document";
@@ -355,7 +378,7 @@ public class AIAgentController {
     public ResponseEntity<?> getDocumentTypes() {
         try {
             String endpoint = aiServiceUrl + "/agent/document-types";
-            ResponseEntity<Map> response = restTemplate.getForEntity(endpoint, Map.class);
+            ResponseEntity<Map> response = restTemplate.exchange(endpoint, HttpMethod.GET, aiGetEntity(), Map.class);
             return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
             log.error("Document types error: {}", e.getMessage());
@@ -374,7 +397,7 @@ public class AIAgentController {
         try {
             authenticateUser(jwt);
             String endpoint = aiServiceUrl + "/agent/session/" + sessionId;
-            ResponseEntity<Map> response = restTemplate.getForEntity(endpoint, Map.class);
+            ResponseEntity<Map> response = restTemplate.exchange(endpoint, HttpMethod.GET, aiGetEntity(), Map.class);
             return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
@@ -389,7 +412,7 @@ public class AIAgentController {
     public ResponseEntity<?> agentHealth() {
         try {
             String endpoint = aiServiceUrl + "/agent/health";
-            ResponseEntity<Map> response = restTemplate.getForEntity(endpoint, Map.class);
+            ResponseEntity<Map> response = restTemplate.exchange(endpoint, HttpMethod.GET, aiGetEntity(), Map.class);
             Map<String, Object> result = new HashMap<>(response.getBody());
             result.put("java_proxy", "healthy");
             return ResponseEntity.ok(result);
