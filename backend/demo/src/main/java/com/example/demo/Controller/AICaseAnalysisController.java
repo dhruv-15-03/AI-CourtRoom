@@ -35,7 +35,25 @@ public class AICaseAnalysisController {
     @Value("${ai.service.url:https://ai-court-ai.onrender.com/api}")
     private String aiServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Value("${ai.service.api.key:}")
+    private String aiServiceApiKey;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    /** Add the shared X-API-Key header for authenticated calls to the Python AI service. */
+    private void applyAiAuth(HttpHeaders headers) {
+        if (aiServiceApiKey != null && !aiServiceApiKey.isBlank()) {
+            headers.set("X-API-Key", aiServiceApiKey);
+        }
+    }
+
+    /** Build a GET request entity carrying the AI service API key (if configured). */
+    private HttpEntity<Void> aiGetEntity() {
+        HttpHeaders headers = new HttpHeaders();
+        applyAiAuth(headers);
+        return new HttpEntity<>(headers);
+    }
 
     /**
      * Analyze case with subscription-based detail levels
@@ -80,6 +98,7 @@ public class AICaseAnalysisController {
             // 4. Call Python ML service
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            applyAiAuth(headers);
             
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(caseData, headers);
             
@@ -158,6 +177,7 @@ public class AICaseAnalysisController {
             // Call Python ML service
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            applyAiAuth(headers);
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestData, headers);
 
             ResponseEntity<Map> mlResponse = restTemplate.exchange(
@@ -187,8 +207,10 @@ public class AICaseAnalysisController {
     public ResponseEntity<?> health() {
         try {
             // Check if ML service is reachable
-            ResponseEntity<Map> healthResponse = restTemplate.getForEntity(
+            ResponseEntity<Map> healthResponse = restTemplate.exchange(
                     aiServiceUrl + "/health",
+                    HttpMethod.GET,
+                    aiGetEntity(),
                     Map.class
             );
 

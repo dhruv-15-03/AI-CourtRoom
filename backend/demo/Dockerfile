@@ -1,5 +1,6 @@
 # Use Eclipse Temurin (official OpenJDK distribution) - Alpine for smaller image size
-FROM eclipse-temurin:17-jre-alpine
+# Must match pom.xml java.version (21); a 17 JRE fails with UnsupportedClassVersionError.
+FROM eclipse-temurin:21-jre-alpine
 
 # Set working directory
 WORKDIR /app
