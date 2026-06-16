@@ -3,16 +3,16 @@ package com.example.demo.Controller;
 import com.example.demo.Classes.Subscription;
 import com.example.demo.Classes.SubscriptionPlan;
 import com.example.demo.Classes.User;
+import com.example.demo.Config.AiServiceClient;
 import com.example.demo.Config.JwtProvider;
 import com.example.demo.Implementation.SubscriptionService;
 import com.example.demo.Repository.UserAll;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 
@@ -32,28 +32,8 @@ public class AICaseAnalysisController {
     @Autowired
     private SubscriptionService subscriptionService;
 
-    @Value("${ai.service.url:https://ai-court-ai.onrender.com/api}")
-    private String aiServiceUrl;
-
-    @Value("${ai.service.api.key:}")
-    private String aiServiceApiKey;
-
     @Autowired
-    private RestTemplate restTemplate;
-
-    /** Add the shared X-API-Key header for authenticated calls to the Python AI service. */
-    private void applyAiAuth(HttpHeaders headers) {
-        if (aiServiceApiKey != null && !aiServiceApiKey.isBlank()) {
-            headers.set("X-API-Key", aiServiceApiKey);
-        }
-    }
-
-    /** Build a GET request entity carrying the AI service API key (if configured). */
-    private HttpEntity<Void> aiGetEntity() {
-        HttpHeaders headers = new HttpHeaders();
-        applyAiAuth(headers);
-        return new HttpEntity<>(headers);
-    }
+    private AiServiceClient aiClient;
 
     /**
      * Analyze case with subscription-based detail levels
@@ -95,24 +75,16 @@ public class AICaseAnalysisController {
 
             log.info("User {} analyzing case with plan: {}", email, plan);
 
-            // 4. Call Python ML service
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            applyAiAuth(headers);
-            
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(caseData, headers);
-            
-            String mlEndpoint = aiServiceUrl + "/analyze";
-            log.info("Calling ML service at: {}", mlEndpoint);
-
-            ResponseEntity<Map> mlResponse;
+            // 4. Call Python ML service through the resilience-protected client
+            Map<String, Object> mlResult;
             try {
-                mlResponse = restTemplate.exchange(
-                        mlEndpoint,
-                        HttpMethod.POST,
-                        request,
-                        Map.class
-                );
+                mlResult = aiClient.postJson("/analyze", caseData);
+            } catch (CallNotPermittedException e) {
+                log.warn("AI circuit open for /analyze: {}", e.getMessage());
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                        "error", "AI service temporarily unavailable",
+                        "message", "The AI service is recovering from high load. Please try again shortly."
+                ));
             } catch (RestClientException e) {
                 log.error("Failed to call ML service: {}", e.getMessage());
                 return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
@@ -121,9 +93,6 @@ public class AICaseAnalysisController {
                         "details", e.getMessage()
                 ));
             }
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> mlResult = (Map<String, Object>) mlResponse.getBody();
 
             if (mlResult == null) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -174,23 +143,19 @@ public class AICaseAnalysisController {
                 ));
             }
 
-            // Call Python ML service
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            applyAiAuth(headers);
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestData, headers);
-
-            ResponseEntity<Map> mlResponse = restTemplate.exchange(
-                    aiServiceUrl + "/analyze/quick",
-                    HttpMethod.POST,
-                    request,
-                    Map.class
-            );
+            // Call Python ML service through the resilience-protected client
+            Map<String, Object> mlResult = aiClient.postJson("/analyze/quick", requestData);
 
             subscriptionService.useAIQuery(user);
 
-            return ResponseEntity.ok(mlResponse.getBody());
+            return ResponseEntity.ok(mlResult);
 
+        } catch (CallNotPermittedException e) {
+            log.warn("AI circuit open for /analyze/quick: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                    "error", "AI service temporarily unavailable",
+                    "message", "The AI service is recovering from high load. Please try again shortly."
+            ));
         } catch (Exception e) {
             log.error("Error in analyzeQuick: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
@@ -206,24 +171,17 @@ public class AICaseAnalysisController {
     @GetMapping("/health")
     public ResponseEntity<?> health() {
         try {
-            // Check if ML service is reachable
-            ResponseEntity<Map> healthResponse = restTemplate.exchange(
-                    aiServiceUrl + "/health",
-                    HttpMethod.GET,
-                    aiGetEntity(),
-                    Map.class
-            );
+            // Check if ML service is reachable (through the circuit breaker)
+            Map<String, Object> mlHealth = aiClient.getJson("/health");
 
             return ResponseEntity.ok(Map.of(
                     "status", "ok",
-                    "mlService", healthResponse.getBody(),
-                    "mlServiceUrl", aiServiceUrl
+                    "mlService", mlHealth != null ? mlHealth : Map.of()
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
                     "status", "error",
-                    "message", "ML service unreachable",
-                    "mlServiceUrl", aiServiceUrl
+                    "message", "ML service unreachable"
             ));
         }
     }

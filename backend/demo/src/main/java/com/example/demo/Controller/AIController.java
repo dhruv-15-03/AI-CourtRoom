@@ -4,7 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
+import com.example.demo.Config.GeminiClient;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -28,7 +29,7 @@ public class AIController {
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
     @Autowired
-    private RestTemplate restTemplate;
+    private GeminiClient geminiClient;
 
     /**
      * Chat endpoint for AI legal assistant
@@ -91,23 +92,9 @@ public class AIController {
                 "topK", 40
             ));
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            // Call Gemini API through the resilience-protected client
+            Map<String, Object> responseBody = geminiClient.generate(apiUrl, geminiRequest);
 
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(geminiRequest, headers);
-
-            // Call Gemini API - suppress warnings for dynamic JSON response parsing
-            @SuppressWarnings({"unchecked", "rawtypes"})
-            ResponseEntity<Map<String, Object>> response = (ResponseEntity) restTemplate.exchange(
-                apiUrl,
-                HttpMethod.POST,
-                entity,
-                Map.class
-            );
-
-            // Extract AI response
-            Map<String, Object> responseBody = response.getBody();
-            
             if (responseBody == null) {
                 log.error("Gemini API returned null response body");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -163,6 +150,10 @@ public class AIController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Failed to parse AI response - unexpected format"));
 
+        } catch (CallNotPermittedException e) {
+            log.warn("Gemini circuit open: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", "AI assistant temporarily unavailable. Please try again shortly."));
         } catch (Exception e) {
             log.error("Error calling Gemini API: {} - {}", e.getClass().getSimpleName(), e.getMessage());
             
