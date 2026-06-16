@@ -1,0 +1,31 @@
+version: 2
+updates:
+  # GitHub Actions used by workflows (would have flagged the Node 20 -> 24 drift)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "ci"
+
+  # Spring Boot backend (Maven)
+  - package-ecosystem: "maven"
+    directory: "/backend/demo"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "backend"]
+    commit-message:
+      prefix: "build"
+
+  # React frontend (npm)
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "frontend"]
+    commit-message:
+      prefix: "build"
