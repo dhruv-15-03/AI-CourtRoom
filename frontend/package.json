@@ -30,6 +30,7 @@
     "start": "react-scripts start",
     "build": "cross-env CI=false react-scripts build",
     "test": "react-scripts test",
+    "test:ci": "cross-env CI=true react-scripts test --watchAll=false --coverage --passWithNoTests --testMatch \"**/src/**/__tests__/**/*.{js,jsx,ts,tsx}\" --testMatch \"**/src/**/*.{spec,test}.{js,jsx,ts,tsx}\"",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
