@@ -8,6 +8,10 @@ import com.example.demo.Repository.CaseAll;
 import com.example.demo.Repository.CaseRequestRepository;
 import com.example.demo.Config.JwtProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +25,12 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/user")
 @CrossOrigin(origins = {"http://localhost:3000", "https://ai-court-room-iota.vercel.app", "https://ai-courtroom.vercel.app"})
 public class UserControllerAPI {
+
+    // Pagination guards (B-3). Opt-in via ?page= / ?size=; the unpaged path is
+    // still served from a bounded, DB-filtered query.
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final int LEGACY_MAX = 500;
     
     @Autowired
     private UserAll userRepository;
@@ -126,41 +136,61 @@ public class UserControllerAPI {
             @RequestParam(required = false) Integer maxFees,
             @RequestParam(required = false) String minRating,
             @RequestParam(required = false) String location,
-            @RequestParam(required = false) String experience) {
+            @RequestParam(required = false) String experience,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
         try {
-            List<User> lawyers = userRepository.findAll().stream()
-                    .filter(user -> user.getIsLawyer() != null && user.getIsLawyer())
-                    .filter(user -> specialization == null || specialization.isEmpty() || 
-                            (user.getSpecialisation() != null && user.getSpecialisation().equals(specialization)))
-                    .filter(user -> maxFees == null || 
-                            (user.getFees() != null && user.getFees() <= maxFees))
+            String spec = (specialization != null && !specialization.isEmpty()) ? specialization : null;
+
+            boolean paged = page != null || size != null;
+            int pageNum = page != null ? Math.max(page, 0) : 0;
+            int pageSize = paged
+                    ? (size != null ? Math.min(Math.max(size, 1), MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE)
+                    : LEGACY_MAX;
+            Pageable pageable = PageRequest.of(pageNum, pageSize, Sort.by(Sort.Direction.ASC, "id"));
+
+            // DB-level query + paging (replaces a full findAll() scan filtered in memory).
+            Page<User> lawyerPage = userRepository.findLawyers(spec, maxFees, pageable);
+
+            List<Map<String, Object>> lawyerDtos = lawyerPage.getContent().stream()
+                    .map(this::toLawyerDto)
                     .collect(Collectors.toList());
-            
-            // Convert to DTOs to avoid lazy loading issues
-            List<Map<String, Object>> lawyerDtos = lawyers.stream().map(lawyer -> {
-                Map<String, Object> dto = new HashMap<>();
-                dto.put("id", lawyer.getId());
-                dto.put("firstName", lawyer.getFirstName());
-                dto.put("lastName", lawyer.getLastName());
-                dto.put("email", lawyer.getEmail());
-                dto.put("mobile", lawyer.getMobile());
-                dto.put("description", lawyer.getDescription());
-                dto.put("specialisation", lawyer.getSpecialisation());
-                dto.put("fees", lawyer.getFees());
-                dto.put("image", lawyer.getImage());
-                dto.put("experience", lawyer.getExperience());
-                dto.put("casesHandled", lawyer.getCasesHandled());
-                dto.put("casesWon", lawyer.getCasesWon());
-                dto.put("successRate", lawyer.getSuccessRate());
-                dto.put("averageRating", lawyer.getAverageRating());
-                dto.put("isVerified", lawyer.getIsVerified());
-                return dto;
-            }).collect(Collectors.toList());
-            
+
+            if (paged) {
+                Map<String, Object> body = new HashMap<>();
+                body.put("content", lawyerDtos);
+                body.put("totalPages", lawyerPage.getTotalPages());
+                body.put("totalElements", lawyerPage.getTotalElements());
+                body.put("page", lawyerPage.getNumber());
+                body.put("size", lawyerPage.getSize());
+                return ResponseEntity.ok(body);
+            }
+
+            // Legacy (unpaged) shape: a bare array, now bounded and DB-filtered.
             return ResponseEntity.ok(lawyerDtos);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    private Map<String, Object> toLawyerDto(User lawyer) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("id", lawyer.getId());
+        dto.put("firstName", lawyer.getFirstName());
+        dto.put("lastName", lawyer.getLastName());
+        dto.put("email", lawyer.getEmail());
+        dto.put("mobile", lawyer.getMobile());
+        dto.put("description", lawyer.getDescription());
+        dto.put("specialisation", lawyer.getSpecialisation());
+        dto.put("fees", lawyer.getFees());
+        dto.put("image", lawyer.getImage());
+        dto.put("experience", lawyer.getExperience());
+        dto.put("casesHandled", lawyer.getCasesHandled());
+        dto.put("casesWon", lawyer.getCasesWon());
+        dto.put("successRate", lawyer.getSuccessRate());
+        dto.put("averageRating", lawyer.getAverageRating());
+        dto.put("isVerified", lawyer.getIsVerified());
+        return dto;
     }
 
     @PostMapping(value = "/request-lawyer/{lawyerId}", consumes = {"application/json", "application/json;charset=UTF-8"}, produces = "application/json")

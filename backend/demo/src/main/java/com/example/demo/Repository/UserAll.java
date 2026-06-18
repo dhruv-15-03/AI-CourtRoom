@@ -1,6 +1,8 @@
 package com.example.demo.Repository;
 
 import com.example.demo.Classes.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +17,15 @@ public interface UserAll extends JpaRepository<User,Integer> {
 
     @Query("SELECT u FROM User u where u.isLawyer=true ")
     public List<User> getLawyers();
+
+    // Paginated, DB-filtered lawyer lookup (B-3). Replaces an in-memory
+    // findAll().filter(...) scan over the entire users table.
+    @Query("SELECT u FROM User u WHERE u.isLawyer = true " +
+           "AND (:specialization IS NULL OR u.specialisation = :specialization) " +
+           "AND (:maxFees IS NULL OR u.fees <= :maxFees)")
+    Page<User> findLawyers(@Param("specialization") String specialization,
+                           @Param("maxFees") Integer maxFees,
+                           Pageable pageable);
 
     @Query("SELECT u FROM User u where u.isJudge=true ")
     public List<User> getJudges();

@@ -9,6 +9,7 @@ import com.example.demo.Repository.UserAll;
 import com.example.demo.Repository.UserChatDao;
 import com.example.demo.Config.JwtProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -97,7 +98,8 @@ public class ChatController {
     public ResponseEntity<?> getChatMessages(
             @RequestHeader("Authorization") String jwt,
             @PathVariable Integer chatId,
-            @RequestParam(defaultValue = "50") int limit) {
+            @RequestParam(defaultValue = "50") int limit,
+            @RequestParam(defaultValue = "0") int page) {
         try {
             String email = JwtProvider.getEmailFromJwt(jwt);
             User user = userRepository.searchByEmail(email);
@@ -117,10 +119,12 @@ public class ChatController {
                         .body(Map.of("error", "Access denied"));
             }
             
-            List<Message> messages = messageRepository.findByChatOrderBySentAtDesc(chat);
-            if (limit > 0 && messages.size() > limit) {
-                messages = messages.subList(0, limit);
-            }
+            // Fetch only the requested page of newest messages from the database
+            // instead of loading the entire chat history into memory.
+            int size = limit > 0 ? Math.min(limit, 200) : 50;
+            int pageNum = Math.max(page, 0);
+            List<Message> messages = messageRepository.findByChatOrderBySentAtDesc(
+                    chat, PageRequest.of(pageNum, size));
             
             List<Map<String, Object>> messageDtos = messages.stream()
                     .map(message -> formatMessageDto(message, user))

@@ -9,6 +9,9 @@ import com.example.demo.Method.CaseService;
 import com.example.demo.Repository.CaseAll;
 import com.example.demo.Repository.UserAll;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -152,6 +155,26 @@ public class CaseServiceImpl implements CaseService {
             .filter(c -> c.getNextHearing() != null && c.getNextHearing().isAfter(now))
             .filter(c -> c.getIsDisposed() == null || !c.getIsDisposed())
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<Case> getAllCases(Pageable pageable) {
+        return caseRepository.findAll(pageable);
+    }
+
+    @Override
+    public Page<Case> getActiveCases(Pageable pageable) {
+        return caseRepository.findByIsDisposed(false, pageable);
+    }
+
+    @Override
+    public Page<Case> getClosedCases(Pageable pageable) {
+        return caseRepository.findByIsDisposed(true, pageable);
+    }
+
+    @Override
+    public Page<Case> searchCasesByDescription(String query, Pageable pageable) {
+        return caseRepository.searchByDescriptionPaged(query, pageable);
     }
     
     @Override
