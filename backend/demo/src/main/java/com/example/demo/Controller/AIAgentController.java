@@ -3,19 +3,19 @@ package com.example.demo.Controller;
 import com.example.demo.Classes.Subscription;
 import com.example.demo.Classes.SubscriptionPlan;
 import com.example.demo.Classes.User;
+import com.example.demo.Config.AiServiceClient;
 import com.example.demo.Config.JwtProvider;
 import com.example.demo.Implementation.SubscriptionService;
 import com.example.demo.Repository.UserAll;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
@@ -45,28 +45,8 @@ public class AIAgentController {
     @Autowired
     private SubscriptionService subscriptionService;
 
-    @Value("${ai.service.url:https://ai-court-ai.onrender.com/api}")
-    private String aiServiceUrl;
-
-    @Value("${ai.service.api.key:}")
-    private String aiServiceApiKey;
-
     @Autowired
-    private RestTemplate restTemplate;
-
-    /** Add the shared X-API-Key header for authenticated calls to the Python AI service. */
-    private void applyAiAuth(HttpHeaders headers) {
-        if (aiServiceApiKey != null && !aiServiceApiKey.isBlank()) {
-            headers.set("X-API-Key", aiServiceApiKey);
-        }
-    }
-
-    /** Build a GET request entity carrying the AI service API key (if configured). */
-    private HttpEntity<Void> aiGetEntity() {
-        HttpHeaders headers = new HttpHeaders();
-        applyAiAuth(headers);
-        return new HttpEntity<>(headers);
-    }
+    private AiServiceClient aiClient;
 
     // ── Tier Mapping ─────────────────────────────────────────────────────
 
@@ -112,19 +92,19 @@ public class AIAgentController {
             body.put("tier", tier);
             body.put("user_id", user.getId().toString());
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            applyAiAuth(headers);
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-
-            String endpoint = aiServiceUrl + "/agent/analyze";
             log.info("Agent analyze for user {} (tier={})", user.getEmail(), tier);
 
-            ResponseEntity<Map> response = restTemplate.exchange(endpoint, HttpMethod.POST, request, Map.class);
+            Map<String, Object> result = aiClient.postJson("/agent/analyze", body);
             subscriptionService.useAIQuery(user);
 
-            return ResponseEntity.ok(response.getBody());
+            return ResponseEntity.ok(result);
 
+        } catch (CallNotPermittedException e) {
+            log.warn("Agent circuit open for /agent/analyze: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                    "error", "agent_unavailable",
+                    "message", "AI Agent service temporarily unavailable"
+            ));
         } catch (RestClientException e) {
             log.error("Agent service error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
@@ -166,11 +146,7 @@ public class AIAgentController {
             Optional<Subscription> sub = subscriptionService.getActiveSubscription(user);
             String tier = sub.map(s -> mapPlanToTier(s.getPlan())).orElse("free");
 
-            // Build multipart request for Python agent
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-            applyAiAuth(headers);
-
+            // Build multipart form for Python agent
             MultiValueMap<String, Object> formData = new LinkedMultiValueMap<>();
             formData.add("query", query);
             formData.add("tier", tier);
@@ -194,17 +170,20 @@ public class AIAgentController {
                 }
             }
 
-            HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(formData, headers);
-            String endpoint = aiServiceUrl + "/agent/analyze-with-docs";
-
             log.info("Agent analyze-with-docs for user {} (tier={}, files={})",
                     user.getEmail(), tier, files != null ? files.size() : 0);
 
-            ResponseEntity<Map> response = restTemplate.exchange(endpoint, HttpMethod.POST, request, Map.class);
+            Map<String, Object> result = aiClient.postMultipart("/agent/analyze-with-docs", formData);
             subscriptionService.useAIQuery(user);
 
-            return ResponseEntity.ok(response.getBody());
+            return ResponseEntity.ok(result);
 
+        } catch (CallNotPermittedException e) {
+            log.warn("Agent circuit open for /agent/analyze-with-docs: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                    "error", "agent_unavailable",
+                    "message", "AI Agent service temporarily unavailable"
+            ));
         } catch (RestClientException e) {
             log.error("Agent service error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
@@ -233,17 +212,16 @@ public class AIAgentController {
                         .body(Map.of("error", "User not found"));
             }
 
-            // Chat uses existing session — just forward to Python
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            applyAiAuth(headers);
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+            Map<String, Object> result = aiClient.postJson("/agent/chat", body);
 
-            String endpoint = aiServiceUrl + "/agent/chat";
-            ResponseEntity<Map> response = restTemplate.exchange(endpoint, HttpMethod.POST, request, Map.class);
+            return ResponseEntity.ok(result);
 
-            return ResponseEntity.ok(response.getBody());
-
+        } catch (CallNotPermittedException e) {
+            log.warn("Agent circuit open for /agent/chat: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                    "error", "agent_unavailable",
+                    "message", "AI Agent temporarily unavailable"
+            ));
         } catch (RestClientException e) {
             log.error("Agent chat error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
@@ -278,10 +256,6 @@ public class AIAgentController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Maximum 20 files"));
             }
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-            applyAiAuth(headers);
-
             MultiValueMap<String, Object> formData = new LinkedMultiValueMap<>();
             if (sessionId != null) {
                 formData.add("session_id", sessionId);
@@ -299,14 +273,16 @@ public class AIAgentController {
                 }
             }
 
-            HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(formData, headers);
-            String endpoint = aiServiceUrl + "/agent/upload-documents";
-
             log.info("Upload {} documents for user {}", files.size(), user.getEmail());
-            ResponseEntity<Map> response = restTemplate.exchange(endpoint, HttpMethod.POST, request, Map.class);
+            Map<String, Object> result = aiClient.postMultipart("/agent/upload-documents", formData);
 
-            return ResponseEntity.ok(response.getBody());
+            return ResponseEntity.ok(result);
 
+        } catch (CallNotPermittedException e) {
+            log.warn("Agent circuit open for /agent/upload-documents: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                    "error", "service_unavailable"
+            ));
         } catch (RestClientException e) {
             log.error("Document upload error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
@@ -345,19 +321,18 @@ public class AIAgentController {
                 ));
             }
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            applyAiAuth(headers);
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-
-            String endpoint = aiServiceUrl + "/agent/generate-document";
             log.info("Generate document type={} for user {}", body.get("doc_type"), user.getEmail());
 
-            ResponseEntity<Map> response = restTemplate.exchange(endpoint, HttpMethod.POST, request, Map.class);
+            Map<String, Object> result = aiClient.postJson("/agent/generate-document", body);
             subscriptionService.useAIQuery(user);
 
-            return ResponseEntity.ok(response.getBody());
+            return ResponseEntity.ok(result);
 
+        } catch (CallNotPermittedException e) {
+            log.warn("Agent circuit open for /agent/generate-document: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                    "error", "service_unavailable"
+            ));
         } catch (RestClientException e) {
             log.error("Document generation error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
@@ -377,9 +352,8 @@ public class AIAgentController {
     @GetMapping("/document-types")
     public ResponseEntity<?> getDocumentTypes() {
         try {
-            String endpoint = aiServiceUrl + "/agent/document-types";
-            ResponseEntity<Map> response = restTemplate.exchange(endpoint, HttpMethod.GET, aiGetEntity(), Map.class);
-            return ResponseEntity.ok(response.getBody());
+            Map<String, Object> result = aiClient.getJson("/agent/document-types");
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("Document types error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
@@ -396,9 +370,8 @@ public class AIAgentController {
             @PathVariable String sessionId) {
         try {
             authenticateUser(jwt);
-            String endpoint = aiServiceUrl + "/agent/session/" + sessionId;
-            ResponseEntity<Map> response = restTemplate.exchange(endpoint, HttpMethod.GET, aiGetEntity(), Map.class);
-            return ResponseEntity.ok(response.getBody());
+            Map<String, Object> result = aiClient.getJson("/agent/session/" + sessionId);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
                     "error", "service_unavailable"
@@ -411,9 +384,8 @@ public class AIAgentController {
     @GetMapping("/health")
     public ResponseEntity<?> agentHealth() {
         try {
-            String endpoint = aiServiceUrl + "/agent/health";
-            ResponseEntity<Map> response = restTemplate.exchange(endpoint, HttpMethod.GET, aiGetEntity(), Map.class);
-            Map<String, Object> result = new HashMap<>(response.getBody());
+            Map<String, Object> agentHealth = aiClient.getJson("/agent/health");
+            Map<String, Object> result = new HashMap<>(agentHealth != null ? agentHealth : Map.of());
             result.put("java_proxy", "healthy");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
