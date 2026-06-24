@@ -1,6 +1,7 @@
 package com.example.demo.Config;
 
 
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -45,7 +46,7 @@ public class AppConfig implements WebMvcConfigurer {
         }
     }
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
+    SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter) throws Exception{
         http.sessionManagement(management-> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.authorizeHttpRequests(Authorize -> Authorize
                 .requestMatchers("/auth/**").permitAll()
@@ -63,6 +64,9 @@ public class AppConfig implements WebMvcConfigurer {
                 // of being silently public.
                 .anyRequest().authenticated())
                 .addFilterBefore(new JwtValidator(), BasicAuthenticationFilter.class)
+                // Run after JwtValidator so the authenticated principal is available for
+                // per-user limiting on the AI endpoints.
+                .addFilterAfter(rateLimitFilter, JwtValidator.class)
                 .csrf(csrf -> csrf.disable())
                 .cors(cors-> cors.configurationSource(corsConfigurationSource()));
         return http.build();
@@ -93,6 +97,19 @@ public class AppConfig implements WebMvcConfigurer {
     @Bean
     PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * A {@link RateLimitFilter} bean is also a servlet {@link jakarta.servlet.Filter}, which
+     * Spring Boot would otherwise auto-register in the main servlet chain in addition to the
+     * Spring Security chain, running it twice per request. Disabling this registration leaves the
+     * filter wired only where we placed it inside {@link #securityFilterChain}.
+     */
+    @Bean
+    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration(RateLimitFilter filter) {
+        FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     /**
