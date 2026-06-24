@@ -2,6 +2,8 @@ package com.example.demo.Repository;
 
 import com.example.demo.Classes.Case;
 import com.example.demo.Classes.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,7 +16,19 @@ import java.util.Optional;
 
 @Repository
 public interface CaseAll extends JpaRepository<Case,Integer> {
-    
+
+    // Paginated variants (B-3) — push filtering/limiting down to the database so
+    // list endpoints can never load an entire table into memory.
+    Page<Case> findByIsDisposed(Boolean isDisposed, Pageable pageable);
+
+    // description is a @Lob (CLOB); LOWER() cannot be applied to a CLOB directly,
+    // so cast it to a string first. title/caseNumber are plain VARCHAR columns.
+    @Query("SELECT c FROM Case c WHERE " +
+           "LOWER(CAST(c.description AS string)) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(c.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(c.caseNumber) LIKE LOWER(CONCAT('%', :query, '%'))")
+    Page<Case> searchByDescriptionPaged(@Param("query") String query, Pageable pageable);
+
     // Case Number and Title Search
     @Query("SELECT c FROM Case c WHERE c.caseNumber LIKE :query OR c.title LIKE :query OR c.description LIKE :query")
     List<Case> searchByQuery(@Param("query") String query);

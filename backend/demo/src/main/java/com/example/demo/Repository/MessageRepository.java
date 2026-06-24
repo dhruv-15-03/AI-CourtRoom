@@ -3,6 +3,7 @@ package com.example.demo.Repository;
 import com.example.demo.Classes.Message;
 import com.example.demo.Classes.Chat;
 import com.example.demo.Classes.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -21,6 +22,12 @@ public interface MessageRepository extends JpaRepository<Message, Integer> {
     
     @Query("SELECT m FROM Message m WHERE m.chat = :chat ORDER BY m.sentAt DESC")
     List<Message> findByChatOrderBySentAtDesc(@Param("chat") Chat chat);
+
+    // Paginated newest-first fetch (B-3) so only the requested page of messages
+    // is loaded from the database instead of the entire chat history.
+    @Query("SELECT m FROM Message m WHERE m.chat = :chat ORDER BY m.sentAt DESC")
+    List<Message> findByChatOrderBySentAtDesc(@Param("chat") Chat chat, Pageable pageable);
+
     List<Message> findByChat(Chat chat);
     
     @Query("SELECT m FROM Message m WHERE m.chat = :chat ORDER BY m.sentAt DESC")

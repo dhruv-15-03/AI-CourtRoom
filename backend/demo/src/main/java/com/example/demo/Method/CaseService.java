@@ -1,6 +1,9 @@
 package com.example.demo.Method;
 
 import com.example.demo.Classes.Case;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -17,6 +20,12 @@ public interface CaseService {
     List<Case> getClosedCases();
     List<Case> searchCasesByDescription(String query);
     List<Case> getUpcomingHearings();
+
+    // Paginated variants (B-3) — DB-level paging for list endpoints.
+    Page<Case> getAllCases(Pageable pageable);
+    Page<Case> getActiveCases(Pageable pageable);
+    Page<Case> getClosedCases(Pageable pageable);
+    Page<Case> searchCasesByDescription(String query, Pageable pageable);
     
     // Assignment methods
     Case assignLawyer(Integer caseId, Integer lawyerId);

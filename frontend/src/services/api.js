@@ -117,6 +117,9 @@ export const userService = {
   getProfile: () => api.get('/api/user/profile'),
   updateProfile: (data) => api.put('/api/user/profile', data),
   getLawyers: (filters = {}) => api.get('/api/user/lawyers', { params: filters }),
+  // Paginated variant (B-3). Pass { page, size, specialization, maxFees }.
+  // Returns the envelope { content, totalPages, totalElements, page, size }.
+  getLawyersPaged: (params = {}) => api.get('/api/user/lawyers', { params }),
   requestLawyer: (lawyerId, caseData) => api.post(`/api/user/request-lawyer/${lawyerId}`, caseData),
   getCases: () => api.get('/api/user/cases'),
   getChats: () => api.get('/api/user/chats'),
@@ -131,6 +134,9 @@ export const caseService = {
   getIndianTemplates: () => api.get('/api/cases/indian-templates'),
   getCaseById: (id) => api.get(`/api/cases/${id}`),
   getAllCases: (params = {}) => api.get('/api/cases/all', { params }),
+  // Paginated variant (B-3). Pass { page, size, status?, search? }.
+  // Returns the envelope { content, totalPages, totalElements, page, size }.
+  getCasesPaged: (params = {}) => api.get('/api/cases/all', { params }),
   updateCase: (id, caseData) => api.put(`/api/cases/${id}`, caseData),
   deleteCase: (id) => api.delete(`/api/cases/${id}`),
   
@@ -176,7 +182,7 @@ export const judgeService = {
 // Chat Services
 export const chatService = {
   getChats: () => api.get('/api/chat/list'),
-  getChatMessages: (chatId, limit = 50) => api.get(`/api/chat/${chatId}/messages`, { params: { limit } }),
+  getChatMessages: (chatId, limit = 50, page = 0) => api.get(`/api/chat/${chatId}/messages`, { params: { limit, page } }),
   sendMessage: (chatId, content) => api.post(`/api/chat/${chatId}/send`, { content }),
   createChat: (participantIds, chatName = null, chatType = 'DIRECT') => 
     api.post('/api/chat/create', { participantIds, chatName, chatType }),

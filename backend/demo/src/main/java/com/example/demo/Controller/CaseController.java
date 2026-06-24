@@ -9,6 +9,10 @@ import java.util.stream.Collectors;
 import java.util.HashMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +26,13 @@ import com.example.demo.Config.JwtProvider;
 @RequestMapping("/api/cases")
 @CrossOrigin(origins = {"http://localhost:3000", "https://ai-court-room-iota.vercel.app", "https://ai-courtroom.vercel.app"})
 public class CaseController {
+
+    // Pagination guards (B-3). Opt-in via ?page= / ?size=. When the client does
+    // not request a page we still fetch through a bounded query so the endpoint
+    // can never load the entire cases table into memory.
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final int LEGACY_MAX = 500;
     
     @Autowired
     private CaseService caseService;
@@ -233,41 +244,63 @@ public class CaseController {
     @GetMapping("/all")
     public ResponseEntity<?> getAllCases(
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String search) {
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
         try {
-            List<Case> cases;
-            
+            boolean paged = page != null || size != null;
+            int pageNum = page != null ? Math.max(page, 0) : 0;
+            int pageSize = paged
+                    ? (size != null ? Math.min(Math.max(size, 1), MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE)
+                    : LEGACY_MAX;
+            Pageable pageable = PageRequest.of(pageNum, pageSize, Sort.by(Sort.Direction.DESC, "id"));
+
+            Page<Case> result;
             if (search != null && !search.trim().isEmpty()) {
-                cases = caseService.searchCasesByDescription(search);
+                result = caseService.searchCasesByDescription(search.trim(), pageable);
             } else if ("active".equalsIgnoreCase(status)) {
-                cases = caseService.getActiveCases();
+                result = caseService.getActiveCases(pageable);
             } else if ("closed".equalsIgnoreCase(status)) {
-                cases = caseService.getClosedCases();
+                result = caseService.getClosedCases(pageable);
             } else {
-                cases = caseService.getAllCases();
+                result = caseService.getAllCases(pageable);
             }
-            
-            List<Map<String, Object>> simplifiedCases = cases.stream()
-                .map(c -> {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("id", c.getId());
-                    m.put("caseNumber", c.getCaseNumber() != null ? c.getCaseNumber() : "");
-                    m.put("title", c.getTitle() != null ? c.getTitle() : "");
-                    m.put("description", c.getDescription() != null ? c.getDescription() : "");
-                    m.put("filingDate", c.getFilingDate() != null ? c.getFilingDate().toString() : "");
-                    m.put("nextHearing", c.getNextHearing() != null ? c.getNextHearing().toString() : "");
-                    m.put("isDisposed", c.getIsDisposed() != null ? c.getIsDisposed() : false);
-                    m.put("status", c.getStatus() != null ? c.getStatus().getDisplayName() : "Filed");
-                    m.put("caseType", c.getCaseType() != null ? c.getCaseType().getDisplayName() : "");
-                    m.put("courtType", c.getCourtType() != null ? c.getCourtType().getDisplayName() : "");
-                    return m;
-                }).collect(Collectors.toList());
-            
+
+            List<Map<String, Object>> simplifiedCases = result.getContent().stream()
+                .map(this::toSimpleCaseMap)
+                .collect(Collectors.toList());
+
+            if (paged) {
+                Map<String, Object> body = new HashMap<>();
+                body.put("content", simplifiedCases);
+                body.put("totalPages", result.getTotalPages());
+                body.put("totalElements", result.getTotalElements());
+                body.put("page", result.getNumber());
+                body.put("size", result.getSize());
+                return ResponseEntity.ok(body);
+            }
+
+            // Legacy (unpaged) shape: a bare array, now served from a bounded query.
             return ResponseEntity.ok(simplifiedCases);
-            
+
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    private Map<String, Object> toSimpleCaseMap(Case c) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", c.getId());
+        m.put("caseNumber", c.getCaseNumber() != null ? c.getCaseNumber() : "");
+        m.put("title", c.getTitle() != null ? c.getTitle() : "");
+        m.put("description", c.getDescription() != null ? c.getDescription() : "");
+        m.put("filingDate", c.getFilingDate() != null ? c.getFilingDate().toString() : "");
+        m.put("nextHearing", c.getNextHearing() != null ? c.getNextHearing().toString() : "");
+        m.put("isDisposed", c.getIsDisposed() != null ? c.getIsDisposed() : false);
+        m.put("status", c.getStatus() != null ? c.getStatus().getDisplayName() : "Filed");
+        m.put("caseType", c.getCaseType() != null ? c.getCaseType().getDisplayName() : "");
+        m.put("courtType", c.getCourtType() != null ? c.getCourtType().getDisplayName() : "");
+        return m;
     }
     
     @PutMapping("/{id}")
