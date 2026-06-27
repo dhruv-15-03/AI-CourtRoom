@@ -6,7 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
@@ -82,6 +84,28 @@ public class GlobalExceptionHandler {
         response.put("timestamp", System.currentTimeMillis());
 
         return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationErrors(
+            MethodArgumentNotValidException ex, WebRequest request) {
+
+        // Bean Validation (@Valid) rejected the request body. Surface a clean 400
+        // with per-field messages instead of letting the generic handler below
+        // turn it into a 500.
+        Map<String, String> fieldErrors = new HashMap<>();
+        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
+            fieldErrors.putIfAbsent(fieldError.getField(), fieldError.getDefaultMessage());
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "Validation Failed");
+        response.put("message", "One or more fields are invalid.");
+        response.put("details", fieldErrors);
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("timestamp", System.currentTimeMillis());
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)

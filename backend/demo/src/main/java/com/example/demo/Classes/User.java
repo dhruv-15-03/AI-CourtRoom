@@ -3,6 +3,10 @@ package com.example.demo.Classes;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,10 +35,15 @@ public class User {
     private Long mobile;
     private String firstName;
     private String lastName;
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email must be a valid address")
     private String email;
+    @NotBlank(message = "Password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
     
     // Professional Identity
+    @NotNull(message = "Role is required")
     @Column(nullable = false)
     @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = UserRoleDeserializer.class)
     @jakarta.persistence.Convert(converter = UserRoleConverter.class)
