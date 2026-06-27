@@ -7,6 +7,7 @@ import com.example.demo.Response.AuthResponse;
 import com.example.demo.Response.Login;
 import com.example.demo.Config.JwtProvider;
 import com.example.demo.Services.EmailService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,7 +36,7 @@ public class AuthController {
     private EmailService emailService;
     
     @PostMapping("/signup")
-    public ResponseEntity<?> add(@RequestBody User user) throws Exception {
+    public ResponseEntity<?> add(@Valid @RequestBody User user) throws Exception {
         User newUser = new User();
 
         User check=userAll.searchByEmail(user.getEmail());
