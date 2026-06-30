@@ -1,6 +1,11 @@
 package com.example.demo.Config;
 
 
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.micrometer.tagged.TaggedCircuitBreakerMetrics;
+import io.micrometer.core.instrument.binder.MeterBinder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,6 +28,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -113,16 +119,55 @@ public class AppConfig implements WebMvcConfigurer {
     }
 
     /**
+     * Per-host circuit breaker registry guarding outbound AI calls. Defaults are
+     * conservative so heavy-but-healthy analysis traffic never trips the breaker:
+     * only after {@code minimum-number-of-calls} samples with a failure rate at or
+     * above the threshold does a host open (fail fast) for the wait duration. Tunable
+     * via {@code ai.resilience.*} / {@code AI_CB_*} environment overrides.
+     */
+    @Bean
+    public CircuitBreakerRegistry aiCircuitBreakerRegistry(
+            @Value("${ai.resilience.failure-rate-threshold:50}") float failureRateThreshold,
+            @Value("${ai.resilience.sliding-window-size:10}") int slidingWindowSize,
+            @Value("${ai.resilience.minimum-number-of-calls:5}") int minimumNumberOfCalls,
+            @Value("${ai.resilience.wait-duration-open-seconds:30}") long waitDurationOpenSeconds,
+            @Value("${ai.resilience.permitted-calls-half-open:3}") int permittedCallsHalfOpen) {
+        CircuitBreakerConfig config = CircuitBreakerConfig.custom()
+                .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
+                .slidingWindowSize(slidingWindowSize)
+                .minimumNumberOfCalls(minimumNumberOfCalls)
+                .failureRateThreshold(failureRateThreshold)
+                .waitDurationInOpenState(Duration.ofSeconds(waitDurationOpenSeconds))
+                .permittedNumberOfCallsInHalfOpenState(permittedCallsHalfOpen)
+                .build();
+        return CircuitBreakerRegistry.of(config);
+    }
+
+    /**
+     * Exposes circuit breaker state/metrics (e.g. {@code resilience4j_circuitbreaker_state})
+     * to the existing Prometheus registry so an open AI breaker is observable/alertable.
+     */
+    @Bean
+    public MeterBinder aiCircuitBreakerMetrics(CircuitBreakerRegistry aiCircuitBreakerRegistry) {
+        return meterRegistry -> TaggedCircuitBreakerMetrics
+                .ofCircuitBreakerRegistry(aiCircuitBreakerRegistry)
+                .bindTo(meterRegistry);
+    }
+
+    /**
      * Shared RestTemplate with explicit connect/read timeouts. Used for all
      * outbound calls to the Python AI service and external APIs so a slow or
      * sleeping upstream cannot exhaust the servlet thread pool by hanging
-     * indefinitely.
+     * indefinitely. The {@link AiResilienceInterceptor} adds a per-host circuit
+     * breaker so sustained failures fail fast instead of queueing behind the timeout.
      */
     @Bean
-    public RestTemplate restTemplate() {
+    public RestTemplate restTemplate(CircuitBreakerRegistry aiCircuitBreakerRegistry) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);   // 10s to establish a connection
         factory.setReadTimeout(120_000);     // 120s for heavy AI analysis responses
-        return new RestTemplate(factory);
+        RestTemplate restTemplate = new RestTemplate(factory);
+        restTemplate.getInterceptors().add(new AiResilienceInterceptor(aiCircuitBreakerRegistry));
+        return restTemplate;
     }
 }

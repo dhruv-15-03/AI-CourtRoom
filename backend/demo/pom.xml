@@ -78,6 +78,23 @@
             <artifactId>micrometer-registry-prometheus</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!--
+            Resilience4j circuit breaker around outbound AI dependency calls
+            (Python ML service + Gemini). Core module only: the breaker is driven
+            programmatically from a ClientHttpRequestInterceptor, so no Spring AOP
+            starter is required. resilience4j-micrometer exposes breaker state to
+            the existing Prometheus registry.
+        -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-circuitbreaker</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-micrometer</artifactId>
+            <version>2.2.0</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
