@@ -1,289 +1,229 @@
 # 🏛️ AI Courtroom
 
-A modern, full-stack web application designed to revolutionize legal proceedings with digital case management, AI-powered assistance, and role-based workflows for users, lawyers, and judges.
+A full-stack legal-tech platform that combines a **role-based case-management workflow** (litigants, lawyers, judges) with a **retrieval-augmented legal AI** that answers questions grounded in statutes and case law — and verifies its own citations before returning them, so it does not invent authorities.
 
-[![Live Demo](https://img.shields.io/badge/🌐%20Live%20Demo-Visit%20Site-blue?style=for-the-badge)](https://ai-court-room-iota.vercel.app/)
-[![GitHub Issues](https://img.shields.io/github/issues/dhruv-15-03/AI-CourtRoom?style=for-the-badge)](https://github.com/dhruv-15-03/AI-CourtRoom/issues)
-[![GitHub Stars](https://img.shields.io/github/stars/dhruv-15-03/AI-CourtRoom?style=for-the-badge)](https://github.com/dhruv-15-03/AI-CourtRoom/stargazers)
+[![CI](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/ci.yml/badge.svg)](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/codeql.yml/badge.svg)](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/codeql.yml)
+![Java 21](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot 3.5](https://img.shields.io/badge/Spring%20Boot-3.5.16-brightgreen)
+![React 19](https://img.shields.io/badge/React-19-blue)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-yellow)
 
-## 🚀 Live Demo
-
-**Production URL**: [ai-court-room-iota.vercel.app](https://ai-court-room-iota.vercel.app/)
-
-**Test Credentials:**
-- **User**: user@example.com / password123
-- **Lawyer**: lawyer@example.com / password123  
-- **Judge**: judge@example.com / password123
-
-## ✨ Features
-
-### 👥 Multi-Role System
-- **Users**: Find lawyers, manage cases, AI legal assistance
-- **Lawyers**: Case management, client communication, dashboard analytics
-- **Judges**: Case review, judgment delivery, court management
-
-### 🤖 AI-Powered Features
-- **Legal Chatbot**: 24/7 legal query assistance
-- **Case Analysis**: AI-driven case evaluation and recommendations
-- **Document Processing**: Automated legal document analysis
-- **Smart Questionnaire**: Dynamic legal assessment forms
-
-### 💬 Communication System
-- **Real-time Chat**: WebSocket-based messaging between users and lawyers
-- **Video Conferencing**: Integrated video calls for consultations
-- **Notification System**: Real-time updates and alerts
-
-### 📊 Dashboard & Analytics
-- **Role-based Dashboards**: Customized interfaces for each user type
-- **Case Tracking**: Complete case lifecycle management
-- **Performance Metrics**: Analytics for lawyers and judges
-- **Financial Management**: Fee tracking and payment integration
-
-## 🏗️ Tech Stack
-
-### 🎨 Frontend
-- **React 19+** - Modern UI with hooks and functional components
-- **Material-UI v7** - Professional component library and theming
-- **Tailwind CSS** - Utility-first styling framework
-- **React Router v7** - Client-side routing with role-based access
-- **Axios** - HTTP client with request/response interceptors
-- **WebSocket + STOMP** - Real-time communication
-
-### ⚙️ Backend  
-- **Java 17** - Latest LTS version for enterprise applications
-- **Spring Boot 3.4.4** - Production-ready framework
-- **Spring Security + JWT** - Robust authentication and authorization
-- **MySQL 8.0** - Relational database with JPA/Hibernate
-- **Maven** - Dependency management and build automation
-- **WebSocket** - Real-time bidirectional communication
-
-### 🤖 AI Integration
-- **External Service**: [AI-court-AI](https://github.com/dhruv-15-03/AI-court-AI)
-- **Natural Language Processing** - Legal query understanding
-- **Machine Learning** - Case outcome prediction
-- **Document AI** - Automated legal document processing
-
-### ☁️ Deployment & DevOps
-- **Frontend**: Vercel (Production) + Netlify (Staging)
-- **Backend**: Railway/Heroku + Docker containerization
-- **Database**: Aiven MySQL Cloud
-- **CDN**: Cloudflare for global content delivery
-- **Monitoring**: Application performance monitoring
-
-## 🚀 Quick Start
-
-### Prerequisites
-```bash
-Node.js 18+ | Java 17+ | Maven 3.6+ | MySQL 8.0+
-```
-
-### One-Command Setup
-```bash
-# Windows
-setup.bat
-
-# Linux/Mac  
-chmod +x setup.sh && ./setup.sh
-```
-
-### Manual Setup
-```bash
-# 1. Clone repository
-git clone https://github.com/dhruv-15-03/AI-CourtRoom.git
-cd AI-CourtRoom
-
-# 2. Setup Frontend
-cd frontend
-npm install
-cp .env.example .env
-npm start  # Runs on http://localhost:3000
-
-# 3. Setup Backend (New Terminal)
-cd backend/demo
-mvn clean install
-mvn spring-boot:run  # Runs on http://localhost:8081
-```
-
-## 📁 Project Structure
-
-```
-AI-CourtRoom/
-├── 📂 frontend/                 # React.js Application
-│   ├── 📂 src/
-│   │   ├── 📂 components/       # Reusable UI components
-│   │   ├── 📂 pages/           # Page components (User, Lawyer, Judge)
-│   │   ├── 📂 contexts/        # React Context providers
-│   │   ├── 📂 services/        # API integration layer
-│   │   └── 📂 utils/           # Utility functions
-│   ├── 📂 public/              # Static assets
-│   └── 📄 package.json         # Dependencies and scripts
-│
-├── 📂 backend/                 # Spring Boot API
-│   └── 📂 demo/
-│       ├── � src/main/java/   # Java source code
-│       │   └── 📂 com/example/demo/
-│       │       ├── 📂 Classes/     # Entity models
-│       │       ├── 📂 Controller/ # REST API controllers
-│       │       ├── 📂 Config/     # Security & configuration
-│       │       ├── 📂 Repository/ # Data access layer
-│       │       └── 📂 Implementation/ # Business logic
-│       └── 📄 pom.xml          # Maven dependencies
-│
-├── 📄 README.md               # Project documentation
-├── 📄 DEVELOPMENT.md          # Development guide
-├── 📄 setup.bat              # Windows setup script
-└── 📄 setup.sh               # Linux/Mac setup script
-```
-
-## 🔗 API Endpoints
-
-### Authentication
-```http
-POST /auth/login              # User authentication
-POST /auth/signup             # User registration
-```
-
-### User APIs
-```http
-GET    /api/user/profile      # Get user profile
-PUT    /api/user/profile      # Update user profile  
-GET    /api/user/lawyers      # Find lawyers with filters
-POST   /api/user/request-lawyer/{id}  # Request lawyer services
-GET    /api/user/cases        # Get user's cases
-GET    /api/user/chats        # Get user's chat conversations
-```
-
-### Lawyer APIs
-```http
-GET    /api/lawyer/dashboard  # Dashboard statistics
-GET    /api/lawyer/case-requests    # Pending case requests
-POST   /api/lawyer/case-requests/{id}/accept  # Accept case
-POST   /api/lawyer/case-requests/{id}/reject  # Reject case
-GET    /api/lawyer/cases      # Lawyer's active cases
-PUT    /api/lawyer/profile    # Update lawyer profile
-```
-
-### Judge APIs
-```http
-GET    /api/judge/dashboard   # Judge dashboard stats
-GET    /api/judge/pending-cases     # Cases awaiting judgment
-GET    /api/judge/cases/{id}  # Case details and documents
-POST   /api/judge/cases/{id}/judgment  # Deliver judgment
-GET    /api/judge/judgments   # Judge's delivered judgments
-```
-
-## 🎨 Screenshots
-
-| User Dashboard | Lawyer Profile | Judge Interface |
-|:---:|:---:|:---:|
-| ![User](https://via.placeholder.com/300x200?text=User+Dashboard) | ![Lawyer](https://via.placeholder.com/300x200?text=Lawyer+Profile) | ![Judge](https://via.placeholder.com/300x200?text=Judge+Interface) |
-
-## 🔐 Security Features
-
-- **JWT Authentication** - Stateless token-based security
-- **Role-Based Access Control** - Granular permissions system
-- **Password Encryption** - BCrypt hashing for user passwords
-- **Input Validation** - Server-side and client-side validation
-- **CORS Protection** - Cross-origin request security
-- **SQL Injection Prevention** - Parameterized queries with JPA
-
-## � Responsive Design
-
-- **Mobile-First Approach** - Optimized for all screen sizes
-- **Progressive Web App** - Offline capabilities and app-like experience
-- **Touch-Friendly UI** - Optimized for touch interactions
-- **Cross-Browser Compatibility** - Works on all modern browsers
-
-## 🧪 Testing
-
-```bash
-# Frontend Testing
-cd frontend
-npm test                    # Unit tests
-npm run test:integration    # Integration tests
-npm run test:e2e           # End-to-end tests
-
-# Backend Testing  
-cd backend/demo
-mvn test                   # Unit tests
-mvn verify                 # Integration tests
-```
-
-## 📊 Performance
-
-- **Frontend**: Lighthouse Score 95+ (Performance, Accessibility, SEO)
-- **Backend**: Response time < 200ms for API endpoints
-- **Database**: Optimized queries with proper indexing
-- **Caching**: Redis implementation for frequently accessed data
-
-## � Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md).
-
-### Development Workflow
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Code Standards
-- **Frontend**: ESLint + Prettier configuration
-- **Backend**: Checkstyle + SpotBugs analysis
-- **Commits**: Conventional Commits specification
-- **Testing**: Minimum 80% code coverage
-
-## 📄 License
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
-## 🌟 Acknowledgments
-
-- **AI Integration**: [AI-court-AI](https://github.com/dhruv-15-03/AI-court-AI) for intelligent legal assistance
-- **UI Components**: Material-UI for professional design system
-- **Icons**: Material Icons and Heroicons for consistent iconography
-- **Hosting**: Vercel for seamless frontend deployment
-
-## 📞 Support & Contact
-
-- **🐛 Bug Reports**: [Create an Issue](https://github.com/dhruv-15-03/AI-CourtRoom/issues/new?template=bug_report.md)
-- **💡 Feature Requests**: [Submit Feature Request](https://github.com/dhruv-15-03/AI-CourtRoom/issues/new?template=feature_request.md)
-- **📖 Documentation**: [Development Guide](DEVELOPMENT.md)
-- **🤖 AI Features**: [AI-court-AI Repository](https://github.com/dhruv-15-03/AI-court-AI)
-
-## 🔄 Roadmap
-
-### Phase 1 ✅ (Completed)
-- [x] User authentication and authorization
-- [x] Role-based dashboards and navigation
-- [x] Lawyer discovery and filtering
-- [x] Basic case management
-- [x] Real-time chat system
-- [x] AI chatbot integration
-- [x] Case Prediction from use queries
-
-### Phase 2 🚧 (In Progress)
-- [ ] Advanced case workflows
-- [ ] Document upload and management
-- [ ] Payment gateway integration
-- [ ] Email notification system
-- [ ] Video conferencing integration
-- [ ] Mobile app development
-
-### Phase 3 📋 (Planned)
-- [ ] Advanced AI features (case prediction)
-- [ ] Blockchain for document verification
-- [ ] Multi-language support
-- [ ] Advanced analytics and reporting
-- [ ] Third-party integrations (calendar, CRM)
-- [ ] White-label solutions
+> **This repository is the web application (React frontend + Spring Boot backend).** The machine-learning / LLM microservice lives in a separate repo: **[AI-court-AI](https://github.com/dhruv-15-03/AI-court-AI)**.
 
 ---
 
-<div align="center">
+## 🌐 Live Demo
 
-**AI Courtroom** - Bringing intelligence, transparency, and efficiency to the legal world.
+**Frontend:** [ai-court-room-iota.vercel.app](https://ai-court-room-iota.vercel.app/)
 
-[⭐ Star this repo](https://github.com/dhruv-15-03/AI-CourtRoom) • [🍴 Fork](https://github.com/dhruv-15-03/AI-CourtRoom/fork) • [📝 Report Bug](https://github.com/dhruv-15-03/AI-CourtRoom/issues) • [💡 Request Feature](https://github.com/dhruv-15-03/AI-CourtRoom/issues)
+> ⚠️ **Cold-start note:** the backend and AI microservice run on Render's free tier and **sleep after inactivity**. The first request after an idle period can take **30–60 seconds** to wake the service, or may briefly return `503` while it boots. Give it a moment and retry. For a guaranteed walkthrough, see the local setup below or **[docs/DEMO.md](docs/DEMO.md)**.
 
-</div>
+**Seeded demo accounts** (role-based dashboards):
+
+| Role | Email | Password |
+|------|-------|----------|
+| User | `user@example.com` | `password123` |
+| Lawyer | `lawyer@example.com` | `password123` |
+| Judge | `judge@example.com` | `password123` |
+
+---
+
+## 🔬 What makes this technically interesting
+
+Most "AI + CRUD" projects stop at *"call an LLM and print the answer."* This one addresses the parts that actually matter in production legal AI:
+
+- **Hybrid retrieval (dense + lexical, fused with RRF).** The RAG pipeline runs a **semantic** leg (sentence-transformer embeddings) and a **lexical** leg (TF-IDF) in parallel, then fuses the two ranked lists with **Reciprocal Rank Fusion** — recovering results that pure vector search or pure keyword search each miss.
+- **Citation-faithfulness guard.** After generation, every case/section the answer cites is checked against the retrieved context. Citations that don't appear in the sources are flagged as `unverified`, the response is marked `grounded: false`, and a caution note is attached — instead of confidently returning a hallucinated precedent.
+- **Structured LLM outputs with graceful degradation.** Analysis endpoints request JSON-mode (`response_format`) and parse defensively; if a provider rejects structured output, the client transparently retries in plain mode rather than 500-ing.
+- **Two-layer resilience against a sleeping/failing AI dependency.**
+  - *Backend (Java):* every outbound call to the ML service and Gemini goes through a **per-host Resilience4j circuit breaker** (a `RestTemplate` interceptor). It records `5xx`/IO failures (but treats `4xx` as healthy), opens at a 50% failure rate over a 10-call window, waits 30s, then probes half-open — and **fails fast to a clean `503`** when open, so a dead upstream can't pin servlet threads on the 120s read timeout and cascade into a pool outage. Breaker state is exported to Prometheus so an open breaker is alertable.
+  - *AI service (Python):* the LLM client uses **route-aware timeouts** and a **single app-owned retry loop with exponential backoff**, retrying only *transient* failures (429 / 5xx / connection timeouts), never deterministic 4xx — with total latency bounded under the gunicorn worker timeout.
+- **Rate limiting with a pluggable backend.** The backend ships a servlet filter with a `RateLimitStore` strategy — **Redis-backed** in production, **in-memory fallback** when Redis is absent — so limits work in both single-node dev and multi-instance deploys.
+- **Observability on both tiers.** Prometheus metrics (Micrometer on the backend, `prometheus-client` on the AI service), **Sentry** error tracking, and dedicated **liveness / readiness / health** probes.
+- **Real CI/CD.** Backend: Maven build + CodeQL + auto-deploy to Render. AI service: `ruff` → `mypy` → `pytest` (coverage-gated) → `pip-audit` → Docker build → **Trivy** image scan → CodeQL. Frontend: Vercel build/deploy.
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+    U["👤 User (Browser)"] -->|HTTPS| FE["React 19 SPA<br/>Vercel"]
+    FE -->|REST + JWT| BE["Spring Boot 3.5 API<br/>Render (Docker)"]
+    FE -.->|WebSocket / STOMP| BE
+    FE -->|Ask legal AI| AI["Flask ML/LLM Service<br/>Render (Docker)"]
+
+    BE --> DB[("MySQL 8<br/>JPA + Flyway")]
+    BE --> RD[("Redis<br/>rate-limit store")]
+    BE -->|payments| RZ["Razorpay"]
+    BE -->|phone auth| FB["Firebase Admin"]
+    BE -->|"kid-friendly chatbot"| GM["Google Gemini"]
+    BE -->|"case analysis / agent"| AI
+
+    AI -->|hybrid RAG| RAG["Dense embeddings + TF-IDF<br/>→ RRF fusion"]
+    AI -->|"case-outcome prediction"| ML["scikit-learn models<br/>MLflow tracking"]
+    AI -->|generation| LLM["LLM provider"]
+    AI -->|"citation guard"| CG["Faithfulness check"]
+
+    BE --> OBS["Actuator / Prometheus / Sentry"]
+    AI --> OBS2["health probes / Prometheus / Sentry"]
+```
+
+A deeper write-up of the design decisions is in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+
+---
+
+## ✨ Features
+
+### Role-based workflows
+- **Users / litigants** — find and request lawyers, track cases, ask the legal AI.
+- **Lawyers** — accept/reject case requests, manage active cases, dashboard analytics, subscriptions.
+- **Judges** — review pending cases, examine documents, deliver judgments.
+
+### AI capabilities
+- **Legal Q&A (RAG)** — grounded answers with verified citations (AI microservice).
+- **Case-outcome prediction** — ML model over case features (AI microservice).
+- **Case analysis** — structured extraction/analysis endpoints (backend ↔ AI microservice).
+- **Assistant chatbot** — a lightweight Google **Gemini** chatbot wired directly into the backend (`/api/ai`), separate from the heavy ML service. See [`GEMINI_AI_SETUP.md`](GEMINI_AI_SETUP.md).
+
+### Platform
+- **Real-time chat** between users and lawyers over WebSocket + STOMP.
+- **Payments** via Razorpay; **subscriptions** for lawyers.
+- **Auth** — JWT (stateless) + Firebase phone verification; BCrypt password hashing; role-based access control.
+- **Notifications & audit** — email (SMTP) and an audit trail.
+
+> Video conferencing is scaffolded behind a feature flag (`REACT_APP_ENABLE_VIDEO_CALLS`) and is **not** enabled in the current deployment — see the roadmap.
+
+---
+
+## 🧰 Tech Stack
+
+### Frontend — `frontend/`
+React **19.1** · Material-UI **7** + `@mui/x-data-grid` 8 · React Router **7** · Axios · Formik + Yup · STOMP / SockJS · `react-markdown` · Sentry · Tailwind CSS 3.4 · Create React App (`react-scripts` 5) · **Host: Vercel**
+
+### Backend — `backend/demo/`
+Java **21** · Spring Boot **3.5.16** · Spring Security + JWT (`jjwt` 0.13) · Spring Data JPA · MySQL **8** · **Flyway** migrations · Redis (rate limiting) · **Resilience4j** (per-host circuit breaker) · Spring Actuator + Micrometer/Prometheus · WebSocket · Razorpay · Firebase Admin · Spring Mail · Maven · **Host: Render (Docker)**
+
+### AI microservice — [`AI-court-AI`](https://github.com/dhruv-15-03/AI-court-AI)
+Python **3.10+** · Flask + Flask-CORS · Flask-Limiter · `sentence-transformers` / `transformers` / `torch` · scikit-learn · NLTK · `umap-learn` + `hdbscan` (clustering) · **MLflow** · `prometheus-client` · Sentry · Flasgger (Swagger) · **Host: Render (Docker)**
+
+---
+
+## 📁 Repository Structure
+
+```
+AI-CourtRoom/
+├── frontend/                     # React 19 SPA (CRA)
+│   ├── src/
+│   │   ├── components/           # Reusable UI
+│   │   ├── pages/                # User / Lawyer / Judge views
+│   │   ├── contexts/             # React context providers
+│   │   ├── services/             # API layer (api.js → backend + AI)
+│   │   └── utils/
+│   ├── vercel.json               # SPA rewrites + security headers + CSP
+│   └── package.json
+│
+├── backend/demo/                 # Spring Boot API
+│   ├── src/main/java/com/example/demo/
+│   │   ├── Controller/           # 14 REST controllers
+│   │   ├── Config/               # Security, rate limiting, CORS, Redis
+│   │   ├── Classes/              # JPA entities
+│   │   ├── Repository/           # Spring Data repositories
+│   │   └── Implementation/       # Service layer
+│   ├── src/main/resources/       # application.properties, Flyway migrations
+│   ├── Dockerfile · docker-compose.yaml
+│   └── pom.xml
+│
+├── docs/                         # Architecture + demo walkthrough
+├── GEMINI_AI_SETUP.md            # Direct-Gemini chatbot setup
+└── README.md
+```
+
+---
+
+## 🚀 Local Setup
+
+**Prerequisites:** Node.js 18+ · Java 21 · Maven 3.9+ · MySQL 8 (or use the H2 fallback) · (optional) the [AI-court-AI](https://github.com/dhruv-15-03/AI-court-AI) service running locally or the hosted URL.
+
+```bash
+git clone https://github.com/dhruv-15-03/AI-CourtRoom.git
+cd AI-CourtRoom
+```
+
+**1. Backend** (`http://localhost:8081`)
+```bash
+cd backend/demo
+cp .env.example .env        # fill in DB / JWT / integration keys
+mvn spring-boot:run
+```
+
+**2. Frontend** (`http://localhost:3000`)
+```bash
+cd frontend
+cp .env.example .env        # REACT_APP_API_URL, REACT_APP_AI_API_URL
+npm install
+npm start
+```
+
+Full environment-variable reference and troubleshooting is in **[DEVELOPMENT.md](DEVELOPMENT.md)**.
+
+---
+
+## 🔗 API Surface (backend)
+
+REST controllers are mounted under these roots (JWT-protected except auth):
+
+| Root | Purpose |
+|------|---------|
+| `/auth` | login / signup |
+| `/api/user` | user profile, lawyer discovery, cases, chats |
+| `/api/lawyer` | dashboard, case requests, active cases |
+| `/api/judge` | pending cases, case detail, judgments |
+| `/api/cases`, `/api/hearings` | case & hearing lifecycle |
+| `/api/subscription` | lawyer subscriptions (Razorpay) |
+| `/api/verification`, `/api/audit` | identity verification, audit trail |
+| `/api/ai` | Gemini assistant chatbot |
+| `/api/agent`, `/api/ai-analysis` | bridge to the ML/LLM microservice |
+| `/actuator/health`, `/actuator/prometheus` | health & metrics |
+
+---
+
+## 🔐 Security
+
+- **JWT** stateless auth + **role-based access control** (User / Lawyer / Judge).
+- **BCrypt** password hashing.
+- **Rate limiting** filter (Redis-backed, in-memory fallback).
+- **CORS** allow-list + a strict **Content-Security-Policy** (see `frontend/vercel.json`).
+- Server- and client-side **input validation** (Spring Validation · Formik/Yup).
+- **Parameterized queries** via JPA; secrets injected through environment variables (`spring-dotenv`).
+- **CodeQL** static analysis + (AI service) **Trivy** image scanning and `pip-audit` in CI.
+
+---
+
+## 🗺️ Roadmap
+
+**Done**
+- Role-based auth, dashboards, and case management
+- Lawyer discovery + request workflow
+- Real-time chat (WebSocket/STOMP)
+- RAG legal Q&A with citation verification + case-outcome prediction
+- Gemini assistant chatbot
+- CI/CD, rate limiting, metrics, health probes
+
+**Planned**
+- Document upload & management for cases
+- Video conferencing (flag currently off)
+- Broader evaluation harness for AI answer quality
+- Multi-language support
+
+---
+
+## 📄 License
+
+© 2026 Dhruv Rastogi. All rights reserved. This source is published for review and portfolio purposes; it is **not** licensed for redistribution or commercial reuse without permission.
+
+## 🙌 Acknowledgments
+
+- **[AI-court-AI](https://github.com/dhruv-15-03/AI-court-AI)** — the ML/LLM microservice powering retrieval-augmented answers and case prediction.
+- Material-UI, Spring Boot, and the open-source ML ecosystem (Hugging Face, scikit-learn, PyTorch).
