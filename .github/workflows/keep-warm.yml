@@ -1,0 +1,33 @@
+name: Keep Demo Warm
+
+# Best-effort pinger for the free-tier Render demo services so recruiters don't
+# hit a 60-170s cold start when they open the live demo.
+#
+# NOTE (honest tradeoff): keeping services warm 24/7 consumes Render's free
+# instance-hours (~750/mo, shared across services) and will exhaust them before
+# month-end. During an active job hunt the real fix is the $7/mo Render paid
+# tier for the backend, or linking a 90-second Loom instead of the raw URL.
+# Tune the cron interval or disable this workflow as needed.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every ~10 min; Render free web services idle after ~15 min
+  workflow_dispatch:          # run manually to warm the demo before an interview/application
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warm backend
+        continue-on-error: true
+        run: |
+          curl -sS -m 200 --retry 2 --retry-all-errors \
+            -o /dev/null -w "backend: HTTP %{http_code} in %{time_total}s\n" \
+            https://ai-court-g20y.onrender.com/actuator/health
+
+      - name: Warm AI service
+        continue-on-error: true
+        run: |
+          curl -sS -m 200 --retry 2 --retry-all-errors \
+            -o /dev/null -w "ai: HTTP %{http_code} in %{time_total}s\n" \
+            https://ai-court-ai.onrender.com/api/health/live
