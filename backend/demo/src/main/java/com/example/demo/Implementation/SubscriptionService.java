@@ -5,6 +5,7 @@ import com.example.demo.Repository.SubscriptionRepository;
 import com.example.demo.Repository.UserAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,8 +31,12 @@ public class SubscriptionService {
     private String razorpayKeySecret;
     
     /**
-     * Get all available subscription plans
+     * Get all available subscription plans. This is pure static enum data with
+     * no per-user state, but every unauthenticated visit to the pricing page
+     * (/api/subscription/plans is permitAll) re-built the same list of maps on
+     * every request. Cache it once; it only ever changes on a deploy.
      */
+    @Cacheable("subscriptionPlans")
     public List<Map<String, Object>> getAvailablePlans() {
         List<Map<String, Object>> plans = new ArrayList<>();
         

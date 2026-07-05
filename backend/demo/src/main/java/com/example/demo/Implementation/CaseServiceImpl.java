@@ -2,6 +2,7 @@ package com.example.demo.Implementation;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.Classes.Case;
 import com.example.demo.Classes.User;
@@ -69,12 +70,17 @@ public class CaseServiceImpl implements CaseService {
         return caseRepository.save(caseEntity);
     }
     
+    // readOnly = true skips Hibernate's dirty-checking flush on commit for these
+    // pure-read paths, which is measurably cheaper under load than the default
+    // read-write transaction every one of these previously ran under.
     @Override
+    @Transactional(readOnly = true)
     public Optional<Case> getCaseById(Integer id) {
         return caseRepository.findById(id);
     }
     
     @Override
+    @Transactional(readOnly = true)
     public List<Case> getAllCases() {
         return caseRepository.findAll();
     }
@@ -123,6 +129,7 @@ public class CaseServiceImpl implements CaseService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public List<Case> getActiveCases() {
         return caseRepository.findAll().stream()
             .filter(c -> c.getIsDisposed() == null || !c.getIsDisposed())
@@ -130,6 +137,7 @@ public class CaseServiceImpl implements CaseService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public List<Case> getClosedCases() {
         return caseRepository.findAll().stream()
             .filter(c -> c.getIsDisposed() != null && c.getIsDisposed())
@@ -137,6 +145,7 @@ public class CaseServiceImpl implements CaseService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public List<Case> searchCasesByDescription(String query) {
         return caseRepository.findAll().stream()
             .filter(c -> {
@@ -149,6 +158,7 @@ public class CaseServiceImpl implements CaseService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public List<Case> getUpcomingHearings() {
         LocalDateTime now = LocalDateTime.now();
         return caseRepository.findAll().stream()
@@ -158,21 +168,25 @@ public class CaseServiceImpl implements CaseService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Case> getAllCases(Pageable pageable) {
         return caseRepository.findAll(pageable);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Case> getActiveCases(Pageable pageable) {
         return caseRepository.findByIsDisposed(false, pageable);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Case> getClosedCases(Pageable pageable) {
         return caseRepository.findByIsDisposed(true, pageable);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Case> searchCasesByDescription(String query, Pageable pageable) {
         return caseRepository.searchByDescriptionPaged(query, pageable);
     }
@@ -238,13 +252,15 @@ public class CaseServiceImpl implements CaseService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public long getActiveCasesCount() {
-        return getActiveCases().size();
+        return caseRepository.countActiveCases();
     }
     
     @Override
+    @Transactional(readOnly = true)
     public long getClosedCasesCount() {
-        return getClosedCases().size();
+        return caseRepository.countDisposedCases();
     }
     
     // Helper methods for Indian legal system
