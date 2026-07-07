@@ -12,7 +12,17 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "court_case")
+@Table(name = "court_case", indexes = {
+        // Every list/dashboard endpoint filters on isDisposed (active vs closed cases);
+        // without an index this was a full table scan on every request.
+        @Index(name = "idx_case_is_disposed", columnList = "isDisposed"),
+        @Index(name = "idx_case_status", columnList = "status"),
+        @Index(name = "idx_case_type", columnList = "caseType"),
+        @Index(name = "idx_case_court_type", columnList = "courtType"),
+        // Upcoming-hearings queries filter on isDisposed AND range-scan nextHearing;
+        // a composite index lets the DB satisfy both predicates in one index seek.
+        @Index(name = "idx_case_disposed_hearing", columnList = "isDisposed, nextHearing")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
