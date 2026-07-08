@@ -23,7 +23,7 @@
     "react-scripts": "5.0.1",
     "socket.io-client": "^4.8.3",
     "sockjs-client": "^1.6.1",
-    "web-vitals": "^2.1.4",
+    "web-vitals": "^5.3.0",
     "yup": "^1.7.1"
   },
   "scripts": {
