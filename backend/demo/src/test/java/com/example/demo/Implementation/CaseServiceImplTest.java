@@ -297,12 +297,13 @@ class CaseServiceImplTest {
 
     @Test
     void getActiveCasesExcludesDisposedCases() {
+        // Filtering now happens in the DB query (CaseAll#findActiveCases), so the
+        // repository mock returns exactly the rows that query would already exclude
+        // disposed cases from; a null isDisposed flag is still treated as active.
         Case active = new Case();
         active.setIsDisposed(false);
-        Case disposed = new Case();
-        disposed.setIsDisposed(true);
         Case nullFlag = new Case(); // legacy rows may have a null flag -> treated as active
-        when(caseRepository.findAll()).thenReturn(List.of(active, disposed, nullFlag));
+        when(caseRepository.findActiveCases()).thenReturn(List.of(active, nullFlag));
 
         List<Case> result = caseService.getActiveCases();
 
@@ -313,16 +314,12 @@ class CaseServiceImplTest {
 
     @Test
     void getUpcomingHearingsExcludesPastAndDisposedCases() {
+        // findUpcomingHearings(now) itself does the past/disposed filtering in the DB
+        // query; the mock only needs to return what that query would yield.
         Case future = new Case();
         future.setNextHearing(LocalDateTime.now().plusDays(1));
         future.setIsDisposed(false);
-        Case past = new Case();
-        past.setNextHearing(LocalDateTime.now().minusDays(1));
-        past.setIsDisposed(false);
-        Case futureButDisposed = new Case();
-        futureButDisposed.setNextHearing(LocalDateTime.now().plusDays(1));
-        futureButDisposed.setIsDisposed(true);
-        when(caseRepository.findAll()).thenReturn(List.of(future, past, futureButDisposed));
+        when(caseRepository.findUpcomingHearings(any(LocalDateTime.class))).thenReturn(List.of(future));
 
         List<Case> result = caseService.getUpcomingHearings();
 
