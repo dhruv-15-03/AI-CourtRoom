@@ -144,6 +144,18 @@ AI-CourtRoom/
 
 ## 🚀 Local Setup
 
+**Fastest path (Docker, recommended):**
+```bash
+git clone https://github.com/dhruv-15-03/AI-CourtRoom.git
+cd AI-CourtRoom
+cp .env.example .env
+docker compose up --build
+docker compose run --rm seed   # one-time: creates the 3 demo accounts above
+```
+Frontend at <http://localhost:3000>, no MySQL/Node/Maven install needed. Full walkthrough (and what's actually been verified running): **[docs/DEMO.md](docs/DEMO.md)**.
+
+**Manual path (no Docker):**
+
 **Prerequisites:** Node.js 18+ · Java 21 · Maven 3.9+ · MySQL 8 (or use the H2 fallback) · (optional) the [AI-court-AI](https://github.com/dhruv-15-03/AI-court-AI) service running locally or the hosted URL.
 
 ```bash
