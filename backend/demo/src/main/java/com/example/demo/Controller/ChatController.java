@@ -328,7 +328,11 @@ public class ChatController {
         dto.put("chatType", chat.getChatType().name());
         dto.put("lastMessageAt", chat.getLastMessageAt() != null ? chat.getLastMessageAt().toString() : "");
         dto.put("lastMessageContent", chat.getLastMessageContent());
-        dto.put("unreadCount", chat.getUnreadCount(currentUser));
+        // Was chat.getUnreadCount(currentUser): lazy-loaded every Message ever sent
+        // in the chat just to count unread ones, once per chat in the list. Replaced
+        // with the existing indexed COUNT query so this endpoint no longer scales
+        // with total conversation history.
+        dto.put("unreadCount", messageRepository.countUnreadMessagesInChat(chat, currentUser));
         dto.put("createdAt", chat.getCreatedAt() != null ? chat.getCreatedAt().toString() : "");
         
         // Get other participant for direct chats
