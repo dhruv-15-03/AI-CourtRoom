@@ -17,7 +17,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class CaseServiceImpl implements CaseService {
@@ -131,17 +130,13 @@ public class CaseServiceImpl implements CaseService {
     @Override
     @Transactional(readOnly = true)
     public List<Case> getActiveCases() {
-        return caseRepository.findAll().stream()
-            .filter(c -> c.getIsDisposed() == null || !c.getIsDisposed())
-            .collect(Collectors.toList());
+        return caseRepository.findActiveCases();
     }
     
     @Override
     @Transactional(readOnly = true)
     public List<Case> getClosedCases() {
-        return caseRepository.findAll().stream()
-            .filter(c -> c.getIsDisposed() != null && c.getIsDisposed())
-            .collect(Collectors.toList());
+        return caseRepository.findDisposedCases();
     }
     
     // Was: findAll().stream().filter(...) — loaded the entire court_case table into

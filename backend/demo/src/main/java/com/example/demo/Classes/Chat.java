@@ -110,6 +110,11 @@ public class Chat {
     }
     
     public int getUnreadCount(User user) {
+        // Not used by the /api/chat/list hot path anymore — that endpoint calls
+        // MessageRepository.countUnreadMessagesInChat (indexed COUNT query per chat)
+        // instead of this, which requires the whole `message` collection to be
+        // lazy-loaded into memory. Kept for callers that already have messages
+        // eagerly fetched and want an in-memory count without another query.
         if (message == null) {
             return 0;
         }

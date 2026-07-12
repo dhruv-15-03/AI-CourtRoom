@@ -52,7 +52,10 @@ public interface CaseAll extends JpaRepository<Case,Integer> {
     List<Case> findByPriority(@Param("priority") Case.Priority priority);
     
     // Active/Disposed Cases (updated field names)
-    @Query("SELECT c FROM Case c WHERE c.isDisposed = false")
+    // isDisposed defaults to false on creation (see CaseServiceImpl#newCase) but the
+    // column is nullable, so treat NULL as "not yet disposed" the same way the old
+    // in-memory filter (isDisposed == null || !isDisposed) did.
+    @Query("SELECT c FROM Case c WHERE c.isDisposed = false OR c.isDisposed IS NULL")
     List<Case> findActiveCases();
     
     @Query("SELECT c FROM Case c WHERE c.isDisposed = true")
