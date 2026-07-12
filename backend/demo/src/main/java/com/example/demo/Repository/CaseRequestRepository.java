@@ -2,6 +2,7 @@ package com.example.demo.Repository;
 
 import com.example.demo.Classes.CaseRequest;
 import com.example.demo.Classes.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -40,6 +41,14 @@ public interface CaseRequestRepository extends JpaRepository<CaseRequest, Intege
     // Find accepted requests for a lawyer
     @Query("SELECT cr FROM CaseRequest cr WHERE cr.lawyer = :lawyer AND cr.status = 'ACCEPTED' ORDER BY cr.requestedAt DESC")
     List<CaseRequest> findAcceptedRequestsByLawyer(@Param("lawyer") User lawyer);
+
+    // Was: LawyerController#getChats called findAcceptedRequestsByLawyer (loads
+    // EVERY accepted request the lawyer has ever had) then did
+    // .stream().limit(3) in Java, and called request.getUser() per row on the
+    // lazy `user` association (N+1). Push both the limit and the user fetch
+    // down to the DB via Pageable + JOIN FETCH.
+    @Query("SELECT cr FROM CaseRequest cr JOIN FETCH cr.user WHERE cr.lawyer = :lawyer AND cr.status = 'ACCEPTED' ORDER BY cr.requestedAt DESC")
+    List<CaseRequest> findAcceptedRequestsByLawyerWithUser(@Param("lawyer") User lawyer, Pageable pageable);
     
     // Find requests by case type
     @Query("SELECT cr FROM CaseRequest cr WHERE cr.caseType = :caseType ORDER BY cr.requestedAt DESC")

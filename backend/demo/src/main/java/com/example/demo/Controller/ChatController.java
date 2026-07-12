@@ -114,7 +114,7 @@ public class ChatController {
             }
             
             Chat chat = chatOptional.get();
-            if (!chat.getUsers().contains(user)) {
+            if (!chatRepository.existsByIdAndUser(chatId, user)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Access denied"));
             }
