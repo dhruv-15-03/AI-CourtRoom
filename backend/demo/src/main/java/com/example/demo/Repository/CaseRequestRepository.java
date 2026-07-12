@@ -16,6 +16,14 @@ public interface CaseRequestRepository extends JpaRepository<CaseRequest, Intege
     // Find requests by lawyer
     @Query("SELECT cr FROM CaseRequest cr WHERE cr.lawyer = :lawyer ORDER BY cr.requestedAt DESC")
     List<CaseRequest> findByLawyer(@Param("lawyer") User lawyer);
+
+    // Was: LawyerController#getCaseRequests iterated the plain findByLawyer result
+    // and called request.getUser() per row, triggering one lazy-load query per
+    // distinct client (N+1) since `user` is FetchType.LAZY. JOIN FETCH pulls the
+    // requester in the same query.
+    @Query("SELECT cr FROM CaseRequest cr JOIN FETCH cr.user WHERE cr.lawyer = :lawyer ORDER BY cr.requestedAt DESC")
+    List<CaseRequest> findByLawyerWithUser(@Param("lawyer") User lawyer);
+
     
     // Find requests by user
     @Query("SELECT cr FROM CaseRequest cr WHERE cr.user = :user ORDER BY cr.requestedAt DESC")

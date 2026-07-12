@@ -67,6 +67,16 @@ public interface CaseAll extends JpaRepository<Case,Integer> {
     
     @Query("SELECT c FROM Case c JOIN c.advocates a WHERE a = :advocate")
     List<Case> findCasesByAdvocate(@Param("advocate") User advocate);
+
+    // Was: LawyerController#getDashboardStats loaded the advocate's entire case
+    // list via findCasesByAdvocate and counted active/past with two Java stream
+    // filters. Push both counts down to the DB instead.
+    @Query("SELECT COUNT(c) FROM Case c JOIN c.advocates a WHERE a = :advocate AND (c.isDisposed = false OR c.isDisposed IS NULL)")
+    long countActiveCasesByAdvocate(@Param("advocate") User advocate);
+
+    @Query("SELECT COUNT(c) FROM Case c JOIN c.advocates a WHERE a = :advocate AND c.isDisposed = true")
+    long countDisposedCasesByAdvocate(@Param("advocate") User advocate);
+
     
     @Query("SELECT c FROM Case c WHERE c.presidingJudge = :judge")
     List<Case> findCasesByPresidingJudge(@Param("judge") User judge);
