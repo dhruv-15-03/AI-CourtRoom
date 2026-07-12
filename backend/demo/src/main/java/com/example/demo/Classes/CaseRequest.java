@@ -9,7 +9,13 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "case_request")
+@Table(name = "case_request", indexes = {
+        // /api/lawyer/case-requests, dashboard pending/accepted counts, and the
+        // client-side request list all filter on lawyer/user, several also on
+        // status — without these this was a full table scan per request.
+        @Index(name = "idx_case_request_lawyer_status", columnList = "lawyer_id, status"),
+        @Index(name = "idx_case_request_user", columnList = "user_id")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
