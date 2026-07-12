@@ -8,6 +8,7 @@ import com.example.demo.Repository.CaseAll;
 import com.example.demo.Repository.CaseRequestRepository;
 import com.example.demo.Config.JwtProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -264,8 +265,9 @@ public class LawyerController {
             List<Map<String, Object>> chats = new ArrayList<>();
             
             // Add some mock chat data based on accepted case requests
-            List<CaseRequest> acceptedRequests = caseRequestRepository.findAcceptedRequestsByLawyer(lawyer);
-            for (CaseRequest request : acceptedRequests.stream().limit(3).collect(Collectors.toList())) {
+            List<CaseRequest> acceptedRequests = caseRequestRepository
+                    .findAcceptedRequestsByLawyerWithUser(lawyer, PageRequest.of(0, 3));
+            for (CaseRequest request : acceptedRequests) {
                 Map<String, Object> chat = new HashMap<>();
                 chat.put("id", "chat_" + request.getId());
                 chat.put("name", request.getUser().getFirstName() + " " + request.getUser().getLastName());

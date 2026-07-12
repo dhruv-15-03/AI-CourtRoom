@@ -2,20 +2,24 @@ package com.example.demo.Repository;
 
 import com.example.demo.Classes.Case;
 import com.example.demo.Classes.CaseRequest;
+import com.example.demo.Classes.Chat;
 import com.example.demo.Classes.User;
 import org.hibernate.Hibernate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -27,6 +31,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * - {@link CaseRequestRepository#findByLawyerWithUser} must eagerly fetch the
  *   requester so building the case-requests DTO doesn't lazy-load `user` once
  *   per row (N+1).
+ * - {@link CaseRequestRepository#findAcceptedRequestsByLawyerWithUser} must
+ *   both cap the result to the requested page size at the DB (instead of
+ *   loading every accepted request and limiting in Java) and eagerly fetch
+ *   `user` for the same reason as above.
+ * - {@link ChatRepository#existsByIdAndUser} must answer a chat-membership
+ *   check without loading the chat's full users collection.
  */
 @DataJpaTest
 @ActiveProfiles("test")
@@ -41,6 +51,9 @@ class LawyerDashboardQueriesTest {
 
     @Autowired
     private CaseRequestRepository caseRequestRepository;
+
+    @Autowired
+    private ChatRepository chatRepository;
 
     private User newUser(String email, User.UserRole role) {
         User user = new User();
@@ -98,5 +111,47 @@ class LawyerDashboardQueriesTest {
         // per row when the DTO builder calls getUser().
         assertTrue(Hibernate.isInitialized(results.get(0).getUser()));
         assertEquals("client@test.com", results.get(0).getUser().getEmail());
+    }
+
+    @Test
+    void findAcceptedRequestsByLawyerWithUser_capsAtDbAndFetchesUser() {
+        User lawyer = newUser("lawyer2@test.com", User.UserRole.ADVOCATE);
+
+        for (int i = 0; i < 5; i++) {
+            User client = newUser("client" + i + "@test.com", User.UserRole.CITIZEN);
+            CaseRequest request = new CaseRequest();
+            request.setLawyer(lawyer);
+            request.setUser(client);
+            request.setCaseTitle("Case " + i);
+            request.setStatus(CaseRequest.RequestStatus.ACCEPTED);
+            caseRequestRepository.save(request);
+        }
+
+        List<CaseRequest> results = caseRequestRepository
+                .findAcceptedRequestsByLawyerWithUser(lawyer, PageRequest.of(0, 3));
+
+        // 5 accepted requests exist but the query must cap to the page size
+        // at the DB, not load all 5 and slice in Java.
+        assertEquals(3, results.size());
+        results.forEach(cr -> assertTrue(Hibernate.isInitialized(cr.getUser())));
+    }
+
+    @Test
+    void existsByIdAndUser_reflectsMembershipWithoutLoadingUserCollection() {
+        User member = newUser("member@test.com", User.UserRole.CITIZEN);
+        User outsider = newUser("outsider@test.com", User.UserRole.CITIZEN);
+
+        Chat chat = new Chat();
+        chat.setChatName("Direct chat");
+        chat.setChatType(Chat.ChatType.DIRECT);
+        chat.setCreatedAt(LocalDateTime.now());
+        chat = chatRepository.save(chat);
+
+        // User.chats is the owning side of the users<->chat_room ManyToMany.
+        member.setChats(new HashSet<>(Set.of(chat)));
+        userRepository.save(member);
+
+        assertTrue(chatRepository.existsByIdAndUser(chat.getId(), member));
+        assertFalse(chatRepository.existsByIdAndUser(chat.getId(), outsider));
     }
 }
