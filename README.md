@@ -1,6 +1,6 @@
 # 🏛️ AI Courtroom
 
-A full-stack legal-tech platform that combines a **role-based case-management workflow** (litigants, lawyers, judges) with a **retrieval-augmented legal AI** that answers questions grounded in statutes and case law — and verifies its own citations before returning them, so it does not invent authorities.
+A full-stack legal-tech platform that combines a **role-based case-management workflow** (litigants, lawyers, judges) with a **retrieval-augmented legal AI** whose verification path checks generated citations against retrieved sources and flags unmatched authorities.
 
 [![CI](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/ci.yml/badge.svg)](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/codeql.yml/badge.svg)](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/codeql.yml)
@@ -82,7 +82,7 @@ A deeper write-up of the design decisions is in **[docs/ARCHITECTURE.md](docs/AR
 - **Judges** — review pending cases, examine documents, deliver judgments.
 
 ### AI capabilities
-- **Legal Q&A (RAG)** — grounded answers with verified citations (AI microservice).
+- **Legal Q&A (RAG)** — retrieved-source grounding with explicit unverified-citation flags (AI microservice).
 - **Case-outcome prediction** — ML model over case features (AI microservice).
 - **Case analysis** — structured extraction/analysis endpoints (backend ↔ AI microservice).
 - **Assistant chatbot** — a lightweight Google **Gemini** chatbot wired directly into the backend (`/api/ai`), separate from the heavy ML service. See [`GEMINI_AI_SETUP.md`](GEMINI_AI_SETUP.md).
