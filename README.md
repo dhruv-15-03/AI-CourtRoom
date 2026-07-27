@@ -13,13 +13,13 @@ A full-stack legal-tech platform that combines a **role-based case-management wo
 
 ---
 
-## 🌐 Live Demo
+## 🌐 Hosted Demo
 
 **Frontend:** [ai-court-room-iota.vercel.app](https://ai-court-room-iota.vercel.app/)
 
-> ⚠️ **Cold-start note:** the backend and AI microservice run on Render's free tier and **sleep after inactivity**. The first request after an idle period can take **30–60 seconds** to wake the service, or may briefly return `503` while it boots. Give it a moment and retry. For a guaranteed walkthrough, see the local setup below or **[docs/DEMO.md](docs/DEMO.md)**.
+> ⚠️ **Free-tier limitation:** the backend and AI microservice sleep after inactivity, and a cold start can take several minutes. Wait for the health checks in **[docs/DEMO.md](docs/DEMO.md)** before logging in. For a deterministic walkthrough, use the self-contained local stack instead.
 
-**Seeded demo accounts** (role-based dashboards):
+**Render-provisioned demo accounts** (role-based dashboards):
 
 | Role | Email | Password |
 |------|-------|----------|

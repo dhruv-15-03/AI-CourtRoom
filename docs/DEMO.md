@@ -3,7 +3,7 @@
 A script for showing **AI Courtroom** to a recruiter, interviewer, or prospective client in ~5 minutes. Two ways to run it — pick whichever fits the moment:
 
 - **Local-first (recommended, no cold-start risk)**: a self-contained `docker compose up` — no external accounts, no waiting on a free-tier host to wake up. See below.
-- **Hosted demo**: the live Render/Vercel deployment. Convenient when you can't run Docker, but depends on Render's free tier being awake (see [Hosted demo](#hosted-demo-fallback) below).
+- **Hosted demo**: the Render/Vercel deployment. Its accounts are provisioned automatically, but the free-tier services must be awake first (see [Hosted demo](#hosted-demo-fallback) below).
 
 ---
 
@@ -42,14 +42,14 @@ To stop and remove the stack: `docker compose down` (add `-v` to also drop the D
 
 ## Hosted demo (fallback)
 
-The backend and AI service are on Render's free tier and **sleep when idle**. **Warm them up first** so nothing 503s during the live demo:
+The backend and AI service are on Render's free tier and **sleep when idle**. The documented demo accounts are provisioned automatically on Render. **Warm both services first**:
 
 1. Open the frontend: <https://ai-court-room-iota.vercel.app/>
 2. Hit the backend health once and wait for it to wake:
    `https://ai-court-g20y.onrender.com/actuator/health`
 3. Hit the AI health once: `https://ai-court-ai.onrender.com/api/health`
 
-Give each 30–60s on the first request. Once warm, they stay up for the session.
+Cold starts can exceed two minutes. Do not start the hosted walkthrough until both health endpoints return HTTP 200; once warm, they stay up for the session.
 
 > If a service returns `503` **instantly and repeatedly** (not a slow wake), it's suspended — revive it from the Render dashboard before demoing. If it just times out with no response at all after a minute or more, check the Render dashboard directly; the service may need a manual restart.
 

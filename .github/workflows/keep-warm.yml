@@ -1,7 +1,7 @@
 name: Keep Demo Warm
 
-# Best-effort pinger for the free-tier Render demo services so recruiters don't
-# hit a 60-170s cold start when they open the live demo.
+# Pings the free-tier Render demo services so recruiters are less likely to hit
+# a cold start. Any failed health request fails the workflow.
 #
 # NOTE (honest tradeoff): keeping services warm 24/7 consumes Render's free
 # instance-hours (~750/mo, shared across services) and will exhaust them before
@@ -19,15 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Warm backend
-        continue-on-error: true
         run: |
-          curl -sS -m 200 --retry 2 --retry-all-errors \
+          curl --fail --silent --show-error --max-time 200 \
             -o /dev/null -w "backend: HTTP %{http_code} in %{time_total}s\n" \
             https://ai-court-g20y.onrender.com/actuator/health
 
       - name: Warm AI service
-        continue-on-error: true
         run: |
-          curl -sS -m 200 --retry 2 --retry-all-errors \
+          curl --fail --silent --show-error --max-time 200 \
             -o /dev/null -w "ai: HTTP %{http_code} in %{time_total}s\n" \
             https://ai-court-ai.onrender.com/api/health/live
