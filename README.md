@@ -1,6 +1,6 @@
 # 🏛️ AI Courtroom
 
-A full-stack legal-tech platform that combines a **role-based case-management workflow** (litigants, lawyers, judges) with a **retrieval-augmented legal AI** that answers questions grounded in statutes and case law — and verifies its own citations before returning them, so it does not invent authorities.
+A full-stack legal-tech platform that combines a **role-based case-management workflow** (litigants, lawyers, judges) with a **retrieval-augmented legal AI** whose verification path checks generated citations against retrieved sources and flags unmatched authorities.
 
 [![CI](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/ci.yml/badge.svg)](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/codeql.yml/badge.svg)](https://github.com/dhruv-15-03/AI-CourtRoom/actions/workflows/codeql.yml)
@@ -82,7 +82,7 @@ A deeper write-up of the design decisions is in **[docs/ARCHITECTURE.md](docs/AR
 - **Judges** — review pending cases, examine documents, deliver judgments.
 
 ### AI capabilities
-- **Legal Q&A (RAG)** — grounded answers with verified citations (AI microservice).
+- **Legal Q&A (RAG)** — retrieved-source grounding with explicit unverified-citation flags (AI microservice).
 - **Case-outcome prediction** — ML model over case features (AI microservice).
 - **Case analysis** — structured extraction/analysis endpoints (backend ↔ AI microservice).
 - **Assistant chatbot** — a lightweight Google **Gemini** chatbot wired directly into the backend (`/api/ai`), separate from the heavy ML service. See [`GEMINI_AI_SETUP.md`](GEMINI_AI_SETUP.md).
@@ -143,6 +143,18 @@ AI-CourtRoom/
 ---
 
 ## 🚀 Local Setup
+
+**Fastest path (Docker, recommended):**
+```bash
+git clone https://github.com/dhruv-15-03/AI-CourtRoom.git
+cd AI-CourtRoom
+cp .env.example .env
+docker compose up --build
+docker compose run --rm seed   # one-time: creates the 3 demo accounts above
+```
+Frontend at <http://localhost:3000>, no MySQL/Node/Maven install needed. Full walkthrough (and what's actually been verified running): **[docs/DEMO.md](docs/DEMO.md)**.
+
+**Manual path (no Docker):**
 
 **Prerequisites:** Node.js 18+ · Java 21 · Maven 3.9+ · MySQL 8 (or use the H2 fallback) · (optional) the [AI-court-AI](https://github.com/dhruv-15-03/AI-court-AI) service running locally or the hosted URL.
 

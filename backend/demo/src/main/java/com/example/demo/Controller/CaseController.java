@@ -677,8 +677,11 @@ public class CaseController {
     @GetMapping("/statistics")
     public ResponseEntity<?> getCaseStatistics() {
         try {
+            // Was: getAllCases().size() — loaded every row in court_case just to count
+            // them on every /statistics hit. Use COUNT(*) instead of materializing
+            // the whole table into a List<Case> just to call .size() on it.
             return ResponseEntity.ok(Map.of(
-                "totalCases", caseService.getAllCases().size(),
+                "totalCases", caseService.getTotalCasesCount(),
                 "activeCases", caseService.getActiveCasesCount(),
                 "closedCases", caseService.getClosedCasesCount()
             ));

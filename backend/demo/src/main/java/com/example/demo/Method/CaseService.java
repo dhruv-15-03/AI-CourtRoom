@@ -38,4 +38,5 @@ public interface CaseService {
     // Statistics
     long getActiveCasesCount();
     long getClosedCasesCount();
+    long getTotalCasesCount();
 }
