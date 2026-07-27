@@ -345,6 +345,31 @@ export const aiService = {
 };
 
 // ============== AI Agent (Full AI Lawyer) Service ==============
+const dispatchAgentStreamFrame = (frame, handlers) => {
+  const lines = frame.split(/\r?\n/);
+  const eventLine = lines.find((line) => line.startsWith('event:'));
+  const dataLines = lines
+    .filter((line) => line.startsWith('data:'))
+    .map((line) => line.slice(5).replace(/^ /, ''));
+
+  if (!eventLine || dataLines.length === 0) return;
+
+  const event = eventLine.slice(6).trim();
+  const rawData = dataLines.join('\n');
+  let payload;
+  try {
+    payload = JSON.parse(rawData);
+  } catch {
+    payload = { raw: rawData };
+  }
+
+  if (event === 'status') handlers.onStatus?.(payload);
+  else if (event === 'citations') handlers.onCitations?.(payload);
+  else if (event === 'token') handlers.onToken?.(payload);
+  else if (event === 'done') handlers.onDone?.(payload);
+  else if (event === 'error') handlers.onError?.(payload);
+};
+
 export const agentService = {
   /**
    * Full AI Lawyer analysis — ML prediction + LLM analysis + precedents + strategy
@@ -453,28 +478,30 @@ export const agentService = {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        // SSE frames are separated by a blank line
+
+        const consumeFrames = (flush = false) => {
+          let boundary = buffer.match(/\r?\n\r?\n/);
+          while (boundary && boundary.index !== undefined) {
+            const frame = buffer.slice(0, boundary.index);
+            buffer = buffer.slice(boundary.index + boundary[0].length);
+            dispatchAgentStreamFrame(frame, handlers);
+            boundary = buffer.match(/\r?\n\r?\n/);
+          }
+
+          if (flush && buffer.trim()) {
+            dispatchAgentStreamFrame(buffer, handlers);
+            buffer = '';
+          }
+        };
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
-          let idx;
-          while ((idx = buffer.indexOf('\n\n')) !== -1) {
-            const frame = buffer.slice(0, idx);
-            buffer = buffer.slice(idx + 2);
-            const evtMatch = frame.match(/^event:\s*(.+)$/m);
-            const dataLines = [...frame.matchAll(/^data:\s?(.*)$/gm)].map(m => m[1]);
-            if (!evtMatch || dataLines.length === 0) continue;
-            const evt = evtMatch[1].trim();
-            let payload;
-            try { payload = JSON.parse(dataLines.join('\n')); } catch { payload = { raw: dataLines.join('\n') }; }
-            if (evt === 'status') handlers.onStatus?.(payload);
-            else if (evt === 'citations') handlers.onCitations?.(payload);
-            else if (evt === 'token') handlers.onToken?.(payload);
-            else if (evt === 'done') handlers.onDone?.(payload);
-            else if (evt === 'error') handlers.onError?.(payload);
-          }
+          consumeFrames();
         }
+        buffer += decoder.decode();
+        consumeFrames(true);
       } catch (err) {
         if (err.name !== 'AbortError') handlers.onError?.({ message: err.message });
       }

@@ -1,0 +1,7 @@
+# Root-level ignores for the local docker-compose demo stack.
+.env
+.env.local
+
+# OS cruft
+.DS_Store
+Thumbs.db

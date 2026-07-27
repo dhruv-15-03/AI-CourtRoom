@@ -1,0 +1,4 @@
+# Shell scripts must stay LF -- they run inside Linux containers (see docker/).
+# Git's autocrlf would otherwise silently reintroduce CRLF on Windows checkouts,
+# breaking the shebang line ("exec ...: no such file or directory").
+*.sh text eol=lf

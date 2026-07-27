@@ -8,6 +8,7 @@ import com.example.demo.Repository.CaseAll;
 import com.example.demo.Repository.CaseRequestRepository;
 import com.example.demo.Config.JwtProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -50,10 +51,12 @@ public class LawyerController {
             // Get accepted requests (active cases)
             long acceptedRequests = caseRequestRepository.countAcceptedRequestsByLawyer(lawyer);
             
-            // Get total cases from Case repository
-            List<Case> totalCases = caseRepository.findCasesByAdvocate(lawyer);
-            long activeCases = totalCases.stream().filter(c -> c.getIsDisposed() == null || !c.getIsDisposed()).count();
-            long pastCases = totalCases.stream().filter(c -> c.getIsDisposed() != null && c.getIsDisposed()).count();
+            // Was: findCasesByAdvocate(lawyer) loaded every case this lawyer has ever
+            // handled just to count active vs past with two Java stream filters.
+            // Pushed down to two indexed COUNT queries instead.
+            long activeCases = caseRepository.countActiveCasesByAdvocate(lawyer);
+            long pastCases = caseRepository.countDisposedCasesByAdvocate(lawyer);
+            long totalCasesHandled = activeCases + pastCases;
             
             // Mock active chats (implement with actual chat repository later)
             long activeChats = 3;
@@ -66,7 +69,7 @@ public class LawyerController {
             stats.put("activeChats", activeChats);
             stats.put("unreadMessages", 1); // Mock
             stats.put("pastCases", pastCases);
-            stats.put("totalCasesHandled", lawyer.getCasesHandled() != null ? lawyer.getCasesHandled() : totalCases.size());
+            stats.put("totalCasesHandled", lawyer.getCasesHandled() != null ? lawyer.getCasesHandled() : totalCasesHandled);
             stats.put("successRate", lawyer.getSuccessRate() != null ? lawyer.getSuccessRate() : 85.0);
             
             return ResponseEntity.ok(stats);
@@ -85,7 +88,10 @@ public class LawyerController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Lawyer not found"));
             }
             
-            List<CaseRequest> requests = caseRequestRepository.findByLawyer(lawyer);
+            // Was: findByLawyer(lawyer), then request.getUser() per row lazily
+            // loaded each requester one at a time (N+1). findByLawyerWithUser
+            // JOIN FETCHes the requester in the same query.
+            List<CaseRequest> requests = caseRequestRepository.findByLawyerWithUser(lawyer);
             
             List<Map<String, Object>> requestDtos = requests.stream().map(request -> {
                 Map<String, Object> dto = new HashMap<>();
@@ -259,8 +265,9 @@ public class LawyerController {
             List<Map<String, Object>> chats = new ArrayList<>();
             
             // Add some mock chat data based on accepted case requests
-            List<CaseRequest> acceptedRequests = caseRequestRepository.findAcceptedRequestsByLawyer(lawyer);
-            for (CaseRequest request : acceptedRequests.stream().limit(3).collect(Collectors.toList())) {
+            List<CaseRequest> acceptedRequests = caseRequestRepository
+                    .findAcceptedRequestsByLawyerWithUser(lawyer, PageRequest.of(0, 3));
+            for (CaseRequest request : acceptedRequests) {
                 Map<String, Object> chat = new HashMap<>();
                 chat.put("id", "chat_" + request.getId());
                 chat.put("name", request.getUser().getFirstName() + " " + request.getUser().getLastName());

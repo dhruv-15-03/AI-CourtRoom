@@ -1,0 +1,105 @@
+# Self-contained local demo stack: MySQL + Spring Boot backend + React frontend.
+#
+# Quick start:
+#   cp .env.example .env      # edit if you want, defaults work out of the box
+#   docker compose up --build
+#   # wait for backend to report healthy, then:
+#   docker compose run --rm seed
+#   open http://localhost:3000
+#
+# The AI/RAG microservice (github.com/dhruv-15-03/AI-court-AI) is NOT part of this
+# compose file -- it's a separate deployable service. By default AI_SERVICE_URL points
+# at the hosted instance, so AI features work if that is up; if you want a fully local
+# AI path, run that service yourself and point AI_SERVICE_URL at it instead.
+#
+# The only credential you may want to add for the AI chatbot feature is GEMINI_API_KEY
+# in .env -- everything else (DB, JWT, demo users) is generated/seeded automatically.
+# NEVER put a real key in this file or in .env.example -- only in your local .env,
+# which is git-ignored.
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ai_courtroom}
+      MYSQL_USER: ${MYSQL_USER:-court_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-court_app_pass}
+    ports:
+      - "3307:3306"
+    volumes:
+      - court_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpass}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./backend/demo
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      DB_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE:-ai_courtroom}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USER: ${MYSQL_USER:-court_app}
+      DB_PASS: ${MYSQL_PASSWORD:-court_app_pass}
+      DDL_AUTO: update
+      JWT_SECRET: ${JWT_SECRET:-local-demo-jwt-secret-change-me-please-64-characters-minimum-xx}
+      CORS_ORIGINS: http://localhost:3000
+      RATE_LIMIT_ENABLED: "true"
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_API_MODEL: ${GEMINI_API_MODEL:-gemini-1.5-flash}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-https://ai-court-ai.onrender.com/api}
+      AI_SERVICE_API_KEY: ${AI_SERVICE_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:8081
+        REACT_APP_AI_API_URL: ${AI_SERVICE_URL:-https://ai-court-ai.onrender.com/api}
+        REACT_APP_WS_URL: http://localhost:8081/ws
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+  # One-shot: creates the 3 demo accounts (citizen / lawyer / judge, all password123)
+  # used by docs/DEMO.md, via the real signup+login API. Run manually after the stack
+  # is up: `docker compose run --rm seed`. Safe to re-run (skips existing accounts).
+  seed:
+    build:
+      context: ./docker
+      dockerfile: seed.Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      BACKEND_URL: http://backend:8081
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${MYSQL_DATABASE:-ai_courtroom}
+      DB_USER: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+    profiles:
+      - tools
+
+volumes:
+  court_mysql_data:
