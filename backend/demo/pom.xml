@@ -88,7 +88,7 @@
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-circuitbreaker</artifactId>
-            <version>2.2.0</version>
+            <version>2.4.0</version>
         </dependency>
         <dependency>
             <groupId>io.github.resilience4j</groupId>
@@ -139,7 +139,7 @@
         <dependency>
             <groupId>com.google.firebase</groupId>
             <artifactId>firebase-admin</artifactId>
-            <version>9.2.0</version>
+            <version>9.10.0</version>
         </dependency>
         <!-- Flyway database migrations (opt-in via FLYWAY_ENABLED; see application.properties) -->
         <dependency>

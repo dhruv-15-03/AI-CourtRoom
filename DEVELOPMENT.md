@@ -91,14 +91,19 @@ Clone and run [AI-court-AI](https://github.com/dhruv-15-03/AI-court-AI) separate
 
 ---
 
-## Running with Docker (backend)
+## Running the full stack with Docker (recommended for a quick demo)
+
+A root-level `docker-compose.yml` brings up MySQL + backend + frontend together — no manual `.env` editing, MySQL install, or Node/Maven setup required:
 
 ```bash
-cd backend/demo
+cp .env.example .env
 docker compose up --build
+docker compose run --rm seed   # one-time: creates the 3 demo accounts (see docs/DEMO.md)
 ```
 
-This brings up the database and the Spring Boot app together (see `docker-compose.yaml`).
+Frontend: <http://localhost:3000>. Backend: <http://localhost:8081>. See [`docs/DEMO.md`](docs/DEMO.md) for the full walkthrough and what's actually been verified running end to end.
+
+`backend/demo/docker-compose.yaml` (backend + DB only, pulls the published `dhruv1503/ai-court` image) still exists for backend-only Docker testing without a local build.
 
 ---
 

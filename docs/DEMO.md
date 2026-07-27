@@ -1,8 +1,46 @@
 # Demo Walkthrough
 
-A script for showing **AI Courtroom** to a recruiter, interviewer, or prospective client in ~5 minutes. It assumes the hosted demo, but every step works locally too (see [DEVELOPMENT.md](../DEVELOPMENT.md)).
+A script for showing **AI Courtroom** to a recruiter, interviewer, or prospective client in ~5 minutes. Two ways to run it — pick whichever fits the moment:
 
-## Before you start (60 seconds)
+- **Local-first (recommended, no cold-start risk)**: a self-contained `docker compose up` — no external accounts, no waiting on a free-tier host to wake up. See below.
+- **Hosted demo**: the live Render/Vercel deployment. Convenient when you can't run Docker, but depends on Render's free tier being awake (see [Hosted demo](#hosted-demo-fallback) below).
+
+---
+
+## Local-first demo (recommended)
+
+**Requirements:** Docker + Docker Compose. Nothing else — the AI microservice defaults to the hosted URL, so AI features work out of the box too as long as that happens to be awake; if not, everything else in the demo (auth, dashboards, case management, chat) works with zero external dependencies.
+
+```bash
+git clone https://github.com/dhruv-15-03/AI-CourtRoom.git
+cd AI-CourtRoom
+cp .env.example .env                # defaults work as-is, no editing required
+docker compose up --build           # first run: ~2-3 min (Maven + npm build)
+```
+
+Wait until `docker compose ps` shows `backend` and `frontend` as `healthy`, then seed the 3 demo accounts (one-time, real signup+login API calls under the hood — see `docker/seed-demo-users.sh`):
+
+```bash
+docker compose run --rm seed
+```
+
+Open <http://localhost:3000> and log in with any of:
+
+| Role | Email | Password |
+|------|-------|----------|
+| User | `user@example.com` | `password123` |
+| Lawyer | `lawyer@example.com` | `password123` |
+| Judge | `judge@example.com` | `password123` |
+
+**What this actually verifies, end to end** (re-run and confirmed working before this doc was written): MySQL container reaches `healthy`, backend passes `/actuator/health`, frontend serves `index.html` (title `AI-CourtRoom`) via nginx, the seed script signs up all 3 roles through the real `/auth/signup` API and each subsequently logs in via the real `/auth/login` API (HTTP 200). The one shortcut taken is bypassing email/mobile OTP verification with a direct SQL update in the seed script, since there's no real mailbox/SMS provider in a local sandbox — production signups still go through the full OTP flow.
+
+To add the in-app Gemini chatbot, put a real key in your local `.env` as `GEMINI_API_KEY` (never commit it) and re-run `docker compose up -d backend`. Everything else in the demo works without it.
+
+To stop and remove the stack: `docker compose down` (add `-v` to also drop the DB volume and start fresh next time).
+
+---
+
+## Hosted demo (fallback)
 
 The backend and AI service are on Render's free tier and **sleep when idle**. **Warm them up first** so nothing 503s during the live demo:
 
@@ -13,7 +51,7 @@ The backend and AI service are on Render's free tier and **sleep when idle**. **
 
 Give each 30–60s on the first request. Once warm, they stay up for the session.
 
-> If a service returns `503` **instantly and repeatedly** (not a slow wake), it's suspended — revive it from the Render dashboard before demoing.
+> If a service returns `503` **instantly and repeatedly** (not a slow wake), it's suspended — revive it from the Render dashboard before demoing. If it just times out with no response at all after a minute or more, check the Render dashboard directly; the service may need a manual restart.
 
 ---
 

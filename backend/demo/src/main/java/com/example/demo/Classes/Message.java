@@ -10,7 +10,15 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "chat_message")
+@Table(name = "chat_message", indexes = {
+        // /api/chat/list runs one countUnreadMessagesInChat query per chat in the
+        // user's conversation list; without this composite index that was a full
+        // scan of chat_message per chat on every page load/poll.
+        @Index(name = "idx_message_chat_read", columnList = "chat_id, isRead"),
+        // Chat history and "latest message" lookups always filter by chat and
+        // order by sentAt.
+        @Index(name = "idx_message_chat_sent", columnList = "chat_id, sentAt")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
