@@ -17,6 +17,13 @@ public interface ChatRepository extends JpaRepository<Chat, Integer> {
     // Find chats by user with JOIN FETCH to avoid lazy loading
     @Query("SELECT DISTINCT c FROM Chat c JOIN FETCH c.users u WHERE u = :user AND c.isActive = true ORDER BY COALESCE(c.lastMessageAt, c.createdAt) DESC")
     List<Chat> findChatsWithUsersByUser(@Param("user") User user);
+
+    // Was: ChatController#getChatMessages loaded chat.getUsers() (the whole
+    // ManyToMany membership collection) purely to check `.contains(user)` for
+    // an access-control gate. An indexed EXISTS query answers the same
+    // question without ever materializing the collection.
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Chat c JOIN c.users u WHERE c.id = :chatId AND u = :user")
+    boolean existsByIdAndUser(@Param("chatId") Integer chatId, @Param("user") User user);
     
     // Find chats by user
     @Query("SELECT c FROM Chat c JOIN c.users u WHERE u = :user AND c.isActive = true ORDER BY COALESCE(c.lastMessageAt, c.createdAt) DESC")

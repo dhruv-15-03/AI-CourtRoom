@@ -240,12 +240,15 @@ function MessageBubble({ message }) {
           border: (t) => (isUser ? "none" : `1px solid ${alpha(t.palette.text.primary, 0.1)}`),
         }}
       >
-        {message.citations?.cases?.length > 0 && (
+        {(message.citations?.cases?.length > 0 || message.citations?.statutes_excerpt) && (
           <CitationsStrip citations={message.citations} />
         )}
         <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
           {message.text || (message.pending ? "…" : "")}
         </Typography>
+        {!isUser && (
+          <CitationTrustState citations={message.citations} meta={message.meta} />
+        )}
         {message.meta && (
           <Typography variant="caption" sx={{ opacity: 0.6, display: "block", mt: 1 }}>
             {message.meta.model} · {message.meta.provider} · {message.meta.elapsed_seconds}s · {message.meta.citation_count} precedents
@@ -271,6 +274,38 @@ function MessageBubble({ message }) {
         )}
       </Paper>
     </Box>
+  );
+}
+
+function CitationTrustState({ citations, meta }) {
+  const unverifiedCitations = [
+    ...(Array.isArray(citations?.unverified_citations) ? citations.unverified_citations : []),
+    ...(Array.isArray(meta?.unverified_citations) ? meta.unverified_citations : []),
+  ]
+    .filter((citation) => typeof citation === "string" && citation.trim())
+    .filter((citation, index, all) => all.indexOf(citation) === index);
+  const groundingStates = [citations?.grounded, meta?.grounded]
+    .filter((value) => typeof value === "boolean");
+  const isUngrounded = unverifiedCitations.length > 0 || groundingStates.includes(false);
+  const isGrounded = !isUngrounded && groundingStates.includes(true);
+
+  if (!isUngrounded && !isGrounded) return null;
+
+  return (
+    <Alert
+      severity={isUngrounded ? "warning" : "success"}
+      role={isUngrounded ? "alert" : "status"}
+      aria-label={isUngrounded ? "Citation grounding warning" : "Citation grounding verified"}
+      sx={{ mt: 1, py: 0, fontSize: 12 }}
+    >
+      {isUngrounded ? (
+        unverifiedCitations.length > 0
+          ? `Grounding check failed. Verify before relying on: ${unverifiedCitations.join("; ")}`
+          : "Grounding check failed. Verify cited authorities before relying on this answer."
+      ) : (
+        "Grounding check passed. Cited authorities matched the retrieved sources."
+      )}
+    </Alert>
   );
 }
 

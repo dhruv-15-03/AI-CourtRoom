@@ -17,7 +17,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class CaseServiceImpl implements CaseService {
@@ -131,40 +130,34 @@ public class CaseServiceImpl implements CaseService {
     @Override
     @Transactional(readOnly = true)
     public List<Case> getActiveCases() {
-        return caseRepository.findAll().stream()
-            .filter(c -> c.getIsDisposed() == null || !c.getIsDisposed())
-            .collect(Collectors.toList());
+        return caseRepository.findActiveCases();
     }
     
     @Override
     @Transactional(readOnly = true)
     public List<Case> getClosedCases() {
-        return caseRepository.findAll().stream()
-            .filter(c -> c.getIsDisposed() != null && c.getIsDisposed())
-            .collect(Collectors.toList());
+        return caseRepository.findDisposedCases();
     }
     
+    // Was: findAll().stream().filter(...) — loaded the entire court_case table into
+    // memory on every hit of GET /api/cases/search. Now pushed down to the same
+    // indexed LIKE query the paged variant already uses (Pageable.unpaged() runs it
+    // without a LIMIT/OFFSET, so behavior for callers of the unpaged List overload
+    // is unchanged, but filtering happens in the DB instead of in Java).
     @Override
     @Transactional(readOnly = true)
     public List<Case> searchCasesByDescription(String query) {
-        return caseRepository.findAll().stream()
-            .filter(c -> {
-                String searchText = query.toLowerCase();
-                return (c.getDescription() != null && c.getDescription().toLowerCase().contains(searchText)) ||
-                       (c.getTitle() != null && c.getTitle().toLowerCase().contains(searchText)) ||
-                       (c.getCaseNumber() != null && c.getCaseNumber().toLowerCase().contains(searchText));
-            })
-            .collect(Collectors.toList());
+        return caseRepository.searchByDescriptionPaged(query, Pageable.unpaged()).getContent();
     }
     
+    // Was: findAll().stream().filter(...) — loaded the entire court_case table into
+    // memory on every hit of GET /api/cases/upcoming-hearings. The repository already
+    // has an equivalent indexed query (idx_case_disposed_hearing covers isDisposed +
+    // nextHearing); reuse it instead of re-implementing the filter in Java.
     @Override
     @Transactional(readOnly = true)
     public List<Case> getUpcomingHearings() {
-        LocalDateTime now = LocalDateTime.now();
-        return caseRepository.findAll().stream()
-            .filter(c -> c.getNextHearing() != null && c.getNextHearing().isAfter(now))
-            .filter(c -> c.getIsDisposed() == null || !c.getIsDisposed())
-            .collect(Collectors.toList());
+        return caseRepository.findUpcomingHearings(LocalDateTime.now());
     }
 
     @Override
@@ -261,6 +254,12 @@ public class CaseServiceImpl implements CaseService {
     @Transactional(readOnly = true)
     public long getClosedCasesCount() {
         return caseRepository.countDisposedCases();
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public long getTotalCasesCount() {
+        return caseRepository.count();
     }
     
     // Helper methods for Indian legal system
