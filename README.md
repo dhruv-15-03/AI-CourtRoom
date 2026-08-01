@@ -41,7 +41,7 @@ Most "AI + CRUD" projects stop at *"call an LLM and print the answer."* This one
   - *AI service (Python):* the LLM client uses **route-aware timeouts** and a **single app-owned retry loop with exponential backoff**, retrying only *transient* failures (429 / 5xx / connection timeouts), never deterministic 4xx — with total latency bounded under the gunicorn worker timeout.
 - **Rate limiting with a pluggable backend.** The backend ships a servlet filter with a `RateLimitStore` strategy — **Redis-backed** in production, **in-memory fallback** when Redis is absent — so limits work in both single-node dev and multi-instance deploys.
 - **Observability on both tiers.** Prometheus metrics (Micrometer on the backend, `prometheus-client` on the AI service), **Sentry** error tracking, and dedicated **liveness / readiness / health** probes.
-- **Real CI/CD.** Backend: Maven build + CodeQL + auto-deploy to Render. AI service: `ruff` → `mypy` → `pytest` (coverage-gated) → `pip-audit` → Docker build → **Trivy** image scan → CodeQL. Frontend: Vercel build/deploy.
+- **Real CI/CD.** Backend: Maven build + CodeQL + auto-deploy to Render. AI service — blocking gates: `ruff` → `mypy` → `pytest` (coverage-gated, floor 25%) → Docker build + smoke. `pip-audit` and **Trivy** image scanning also run, but are reported as advisory and do not fail the build. CodeQL runs as a separate workflow. Frontend: Vercel build/deploy.
 
 ---
 
@@ -100,7 +100,7 @@ A deeper write-up of the design decisions is in **[docs/ARCHITECTURE.md](docs/AR
 ## 🧰 Tech Stack
 
 ### Frontend — `frontend/`
-React **19.1** · Material-UI **7** + `@mui/x-data-grid` 8 · React Router **7** · Axios · Formik + Yup · STOMP / SockJS · `react-markdown` · Sentry · Tailwind CSS 3.4 · Create React App (`react-scripts` 5) · **Host: Vercel**
+React **19.1** · Material-UI **7** + `@mui/x-data-grid` **9** · React Router **7** · Axios · Formik + Yup · STOMP / SockJS · `react-markdown` · Sentry · Tailwind CSS 3.4 · Create React App (`react-scripts` 5) · **Host: Vercel**
 
 ### Backend — `backend/demo/`
 Java **21** · Spring Boot **3.5.16** · Spring Security + JWT (`jjwt` 0.13) · Spring Data JPA · MySQL **8** · **Flyway** migrations · Redis (rate limiting) · **Resilience4j** (per-host circuit breaker) · Spring Actuator + Micrometer/Prometheus · WebSocket · Razorpay · Firebase Admin · Spring Mail · Maven · **Host: Render (Docker)**
