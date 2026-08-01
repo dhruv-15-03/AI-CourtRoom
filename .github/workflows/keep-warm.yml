@@ -1,7 +1,15 @@
 name: Keep Demo Warm
 
-# Pings the free-tier Render demo services so recruiters are less likely to hit
-# a cold start. Any failed health request fails the workflow.
+# Best-effort pinger for the free-tier Render demo services so recruiters don't
+# hit a 60-170s cold start when they open the live demo.
+#
+# This workflow must NEVER report a repo-level failure. It is a warmer, not a
+# health assertion. A slow Render cold start legitimately exceeds the request
+# timeout and returns HTTP 000, and the backend answers 403 on unauthenticated
+# paths because Spring Security guards every route. Both still wake the service,
+# which is the entire point. Measured while warm: backend /actuator/health -> 200
+# in 0.76s, AI service /api/health/live -> 200 in 0.1s. The services are healthy;
+# only the cold start is slow.
 #
 # NOTE (honest tradeoff): keeping services warm 24/7 consumes Render's free
 # instance-hours (~750/mo, shared across services) and will exhaust them before
@@ -19,13 +27,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Warm backend
+        continue-on-error: true
         run: |
-          curl --fail --silent --show-error --max-time 200 \
+          curl --silent --show-error --max-time 240 --retry 2 --retry-all-errors \
             -o /dev/null -w "backend: HTTP %{http_code} in %{time_total}s\n" \
             https://ai-court-g20y.onrender.com/actuator/health
 
+      # Must always run: the AI service has the slowest cold start, so it has to
+      # be pinged even when the backend step timed out or errored. Previously a
+      # backend failure aborted the job and left the slowest service unwarmed.
       - name: Warm AI service
+        if: always()
+        continue-on-error: true
         run: |
-          curl --fail --silent --show-error --max-time 200 \
+          curl --silent --show-error --max-time 240 --retry 2 --retry-all-errors \
             -o /dev/null -w "ai: HTTP %{http_code} in %{time_total}s\n" \
             https://ai-court-ai.onrender.com/api/health/live
