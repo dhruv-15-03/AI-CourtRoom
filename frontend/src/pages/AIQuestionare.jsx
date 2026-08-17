@@ -38,6 +38,7 @@ import {
   Info,
 } from "@mui/icons-material"
 import { aiService, getConfidenceDisplay } from "../services/api"
+import { SNACKBAR_ANCHOR } from "../components/common/snackbarAnchor"
 
 const DynamicQuestionnaire = () => {
   const theme = useTheme()
@@ -566,7 +567,8 @@ const DynamicQuestionnaire = () => {
           </CardContent>
         </Card>
 
-        <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}>
+        <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}
+          anchorOrigin={SNACKBAR_ANCHOR}>
           <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
             {error}
           </Alert>
@@ -846,7 +848,8 @@ const DynamicQuestionnaire = () => {
         </CardContent>
       </Card>
 
-      <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}>
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}
+        anchorOrigin={SNACKBAR_ANCHOR}>
         <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
           {error}
         </Alert>

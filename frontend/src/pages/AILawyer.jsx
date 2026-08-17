@@ -15,6 +15,8 @@ import {
   AccountBalance, Shield, Balance, AutoAwesome,
 } from "@mui/icons-material";
 import { agentService } from "../services/api";
+import { agentErrorMessage } from "../utils/serviceErrors";
+import { SNACKBAR_ANCHOR } from "../components/common/snackbarAnchor";
 
 const AILawyer = () => {
   const theme = useTheme();
@@ -37,17 +39,37 @@ const AILawyer = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "info" });
   const [docGenOpen, setDocGenOpen] = useState(false);
   const [docTypes, setDocTypes] = useState([]);
+  const [docTypesError, setDocTypesError] = useState("");
+  const [loadingDocTypes, setLoadingDocTypes] = useState(true);
   const [selectedDocType, setSelectedDocType] = useState("");
   const [generatingDoc, setGeneratingDoc] = useState(false);
   const [generatedDoc, setGeneratedDoc] = useState(null);
   const [docInstructions, setDocInstructions] = useState("");
 
-  // Load document types on mount
-  useEffect(() => {
-    agentService.getDocumentTypes()
-      .then(res => setDocTypes(res.data?.document_types || []))
-      .catch(() => {});
+  // Load document types on mount.
+  //
+  // This request doubles as a health probe for the agent service: it is the
+  // first `/api/agent/*` call the page makes, so if it fails the rest of the
+  // page (analysis, chat, drafting) is very likely unavailable too. Failing
+  // silently here used to leave the UI looking fully functional, so we surface
+  // the outage instead. Retry is user-initiated only — never an automatic loop.
+  const loadDocTypes = useCallback(async () => {
+    setLoadingDocTypes(true);
+    try {
+      const res = await agentService.getDocumentTypes();
+      setDocTypes(res.data?.document_types || []);
+      setDocTypesError("");
+    } catch (err) {
+      setDocTypes([]);
+      setDocTypesError(agentErrorMessage(err));
+    } finally {
+      setLoadingDocTypes(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadDocTypes();
+  }, [loadDocTypes]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -77,7 +99,7 @@ const AILawyer = () => {
     } catch (err) {
       setSnackbar({
         open: true,
-        message: "Failed to process documents: " + (err.response?.data?.message || err.message),
+        message: "Couldn't process documents. " + agentErrorMessage(err),
         severity: "error",
       });
     } finally {
@@ -119,8 +141,11 @@ const AILawyer = () => {
 
       setSnackbar({ open: true, message: "Case analysis complete!", severity: "success" });
     } catch (err) {
-      const msg = err.response?.data?.message || err.message;
-      setSnackbar({ open: true, message: "Analysis failed: " + msg, severity: "error" });
+      setSnackbar({
+        open: true,
+        message: "Couldn't complete the analysis. " + agentErrorMessage(err),
+        severity: "error",
+      });
     } finally {
       setAnalyzing(false);
     }
@@ -144,10 +169,9 @@ const AILawyer = () => {
         timestamp: new Date(),
       }]);
     } catch (err) {
-      const errMsg = err.response?.data?.message || "Failed to get response";
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: `Error: ${errMsg}`,
+        content: agentErrorMessage(err),
         timestamp: new Date(),
         isError: true,
       }]);
@@ -174,7 +198,7 @@ const AILawyer = () => {
     } catch (err) {
       setSnackbar({
         open: true,
-        message: "Document generation failed: " + (err.response?.data?.message || err.message),
+        message: "Couldn't generate the document. " + agentErrorMessage(err),
         severity: "error",
       });
     } finally {
@@ -201,6 +225,23 @@ const AILawyer = () => {
           Upload your case documents, describe your situation, and get comprehensive legal analysis with court-ready documents.
         </Typography>
       </Box>
+
+      {/* Agent-service outage notice. The document-types probe above is the
+          page's canary — if it failed, say so plainly instead of rendering a
+          form that cannot work. */}
+      {docTypesError && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 3 }}
+          action={
+            <Button color="inherit" size="small" onClick={loadDocTypes} disabled={loadingDocTypes}>
+              {loadingDocTypes ? "Retrying…" : "Retry"}
+            </Button>
+          }
+        >
+          {docTypesError} Case analysis and document drafting may not work until it is back.
+        </Alert>
+      )}
 
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3 }} centered>
         <Tab icon={<Description />} label="Case Input" />
@@ -490,7 +531,13 @@ const AILawyer = () => {
                 Select a document type and the AI Lawyer will draft it using your case details, analysis, and uploaded documents.
               </Typography>
 
-              <FormControl fullWidth sx={{ mb: 2 }}>
+              {docTypesError && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  {docTypesError}
+                </Alert>
+              )}
+
+              <FormControl fullWidth sx={{ mb: 2 }} disabled={docTypes.length === 0}>
                 <InputLabel>Document Type</InputLabel>
                 <Select value={selectedDocType} onChange={(e) => setSelectedDocType(e.target.value)}
                   label="Document Type">
@@ -544,7 +591,12 @@ const AILawyer = () => {
       <Dialog open={docGenOpen} onClose={() => setDocGenOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Generate Court Document</DialogTitle>
         <DialogContent>
-          <FormControl fullWidth sx={{ mt: 1, mb: 2 }}>
+          {docTypesError && (
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              {docTypesError}
+            </Alert>
+          )}
+          <FormControl fullWidth sx={{ mt: 1, mb: 2 }} disabled={docTypes.length === 0}>
             <InputLabel>Document Type</InputLabel>
             <Select value={selectedDocType} onChange={(e) => setSelectedDocType(e.target.value)}
               label="Document Type">
@@ -574,7 +626,7 @@ const AILawyer = () => {
       {/* Snackbar */}
       <Snackbar open={snackbar.open} autoHideDuration={4000}
         onClose={() => setSnackbar(s => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+        anchorOrigin={SNACKBAR_ANCHOR}>
         <Alert severity={snackbar.severity} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
           {snackbar.message}
         </Alert>

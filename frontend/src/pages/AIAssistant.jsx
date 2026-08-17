@@ -16,6 +16,7 @@ import {
 import { Psychology, Chat, AutoAwesome, Star, CreditCard, CheckCircle } from "@mui/icons-material"
 import { useNavigate } from "react-router-dom"
 import { userService, subscriptionService } from "../services/api"
+import { SNACKBAR_ANCHOR } from "../components/common/snackbarAnchor"
 
 export default function AIAssistant() {
   const theme = useTheme()
@@ -161,7 +162,7 @@ export default function AIAssistant() {
                     fontFamily: "serif",
                   }}
                 >
-                  {subscription.plan} Plan Active
+                  {subscription.plan} · Active
                 </Typography>
                 <Chip
                   label={subscription.isUnlimited ? "Unlimited" : `${subscription.queriesRemaining} queries`}
@@ -353,7 +354,8 @@ export default function AIAssistant() {
         </Card>
       )}
       
-      <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}>
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}
+        anchorOrigin={SNACKBAR_ANCHOR}>
         <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
           {error}
         </Alert>
