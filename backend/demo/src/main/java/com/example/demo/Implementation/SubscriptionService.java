@@ -35,6 +35,11 @@ public class SubscriptionService {
      * no per-user state, but every unauthenticated visit to the pricing page
      * (/api/subscription/plans is permitAll) re-built the same list of maps on
      * every request. Cache it once; it only ever changes on a deploy.
+     *
+     * NOTE: this requires spring.cache.type to resolve to an in-memory backend.
+     * See application.properties. Without it, Spring Boot auto-configures a
+     * RedisCacheManager (spring-boot-starter-data-redis is on the classpath) and
+     * this annotation takes the endpoint down with 400 "Unable to connect to Redis".
      */
     @Cacheable("subscriptionPlans")
     public List<Map<String, Object>> getAvailablePlans() {
