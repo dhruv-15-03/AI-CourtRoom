@@ -46,6 +46,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { subscriptionService } from "../services/api";
+import { SNACKBAR_ANCHOR } from "../components/common/snackbarAnchor";
 
 // Plan icons mapping
 const planIcons = {
@@ -614,10 +615,12 @@ export default function SubscriptionPage() {
       </Dialog>
 
       {/* Notifications */}
-      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}>
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}
+        anchorOrigin={SNACKBAR_ANCHOR}>
         <Alert onClose={() => setError(null)} severity="error" sx={{ width: "100%" }}>{error}</Alert>
       </Snackbar>
-      <Snackbar open={!!success} autoHideDuration={6000} onClose={() => setSuccess(null)}>
+      <Snackbar open={!!success} autoHideDuration={6000} onClose={() => setSuccess(null)}
+        anchorOrigin={SNACKBAR_ANCHOR}>
         <Alert onClose={() => setSuccess(null)} severity="success" sx={{ width: "100%" }}>{success}</Alert>
       </Snackbar>
     </Box>

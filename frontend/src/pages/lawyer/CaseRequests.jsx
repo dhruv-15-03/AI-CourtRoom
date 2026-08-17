@@ -22,6 +22,7 @@ import EventIcon from '@mui/icons-material/Event';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import { useCaseRequests } from '../../hooks/useLawyerData';
+import { SNACKBAR_ANCHOR } from '../../components/common/snackbarAnchor';
 
 export default function CaseRequests({ mode, setMode }) {
   const { requests, loading, error, acceptRequest, rejectRequest } = useCaseRequests();
@@ -293,6 +294,7 @@ export default function CaseRequests({ mode, setMode }) {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
+        anchorOrigin={SNACKBAR_ANCHOR}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
         <Alert 

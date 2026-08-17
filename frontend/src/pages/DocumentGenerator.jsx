@@ -12,6 +12,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DownloadIcon from '@mui/icons-material/Download';
 import GavelIcon from '@mui/icons-material/Gavel';
 import { agentService } from '../services/api';
+import { agentErrorMessage } from '../utils/serviceErrors';
 
 export default function DocumentGenerator() {
   const [types, setTypes] = useState([]);
@@ -33,7 +34,8 @@ export default function DocumentGenerator() {
         setTypes(list);
         if (list.length && !docType) setDocType(list[0].id);
       } catch (e) {
-        setError('Failed to load document types');
+        setTypes([]);
+        setError(agentErrorMessage(e));
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -53,7 +55,7 @@ export default function DocumentGenerator() {
       });
       setDoc(res.data);
     } catch (e) {
-      setError(e?.response?.data?.message || 'Generation failed');
+      setError(agentErrorMessage(e));
     } finally { setLoading(false); }
   };
 
@@ -134,7 +136,7 @@ export default function DocumentGenerator() {
             value={sessionId} onChange={e => setSessionId(e.target.value)}
           />
 
-          {error && <Alert severity="error">{error}</Alert>}
+          {error && <Alert severity="warning">{error}</Alert>}
           {loading && <LinearProgress />}
 
           <Box>

@@ -33,10 +33,10 @@ import {
   Save,
   Cancel,
   Verified,
-  TrendingUp,
   Logout,
 } from "@mui/icons-material"
 import { userService } from "../services/api"
+import { SNACKBAR_ANCHOR } from "./common/snackbarAnchor"
 import { useAuth } from "../contexts/AuthContext"
 
 const presetAvatars = ["/avatars/avatar1.png", "/avatars/avatar2.png", "/avatars/avatar3.png"]
@@ -958,32 +958,19 @@ export default function UnifiedProfile() {
                         color: theme.palette.mode === "dark" ? "text.primary" : "#1e3a8a",
                       }}
                     >
-                      Standard User Account
+                      Citizen Account
                     </Typography>
                     <Typography
                       sx={{
-                        mb: 3,
+                        mb: 0,
                         color: theme.palette.mode === "dark" ? "text.secondary" : "text.secondary",
                       }}
                     >
-                      Upgrade to access professional legal features and showcase your expertise.
+                      This account is not registered as a legal professional, so the lawyer and
+                      judge tools stay hidden. Professional roles are chosen when the account is
+                      created and require credential verification. This has no bearing on your
+                      subscription.
                     </Typography>
-                    <Button
-                      variant="outlined"
-                      startIcon={<TrendingUp />}
-                      sx={{
-                        borderRadius: 2,
-                        borderColor: theme.palette.mode === "dark" ? "#3b82f6" : "#1e3a8a",
-                        color: theme.palette.mode === "dark" ? "#3b82f6" : "#1e3a8a",
-                        "&:hover": {
-                          borderColor: theme.palette.mode === "dark" ? "#60a5fa" : "#1e40af",
-                          bgcolor:
-                            theme.palette.mode === "dark" ? "rgba(59, 130, 246, 0.08)" : "rgba(30, 58, 138, 0.04)",
-                        },
-                      }}
-                    >
-                      Upgrade Account
-                    </Button>
                   </Paper>
                 </Box>
               )}
@@ -998,7 +985,7 @@ export default function UnifiedProfile() {
           open={toast.open}
           autoHideDuration={6000}
           onClose={() => setToast({ ...toast, open: false })}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+          anchorOrigin={SNACKBAR_ANCHOR}
         >
           <Alert
             severity={toast.severity}
