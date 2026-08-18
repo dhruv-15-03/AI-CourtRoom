@@ -19,7 +19,16 @@ name: Keep Demo Warm
 
 on:
   schedule:
-    - cron: '*/10 * * * *'   # every ~10 min; Render free web services idle after ~15 min
+    # Budget-aware window. Render free tier gives 750 instance-hours/month across
+    # ALL free services. Warming 2 services 24/7 costs ~1,440 h/month, which
+    # exhausted the quota on 2026-08-16 and suspended the AI service until 01 Sep
+    # (symptom: HTTP 503 with x-render-routing: hibernate-wake-error).
+    #
+    # 12h/day x 2 services x 30 days = 720 h/month, just inside the 750 cap.
+    # 04:00-15:59 UTC = 09:30-21:29 IST: covers Indian recruiter hours plus the
+    # US morning overlap. Outside the window the demo cold-starts (~60-170s),
+    # which is the deliberate trade for not blacking out mid-month.
+    - cron: '*/10 4-15 * * *'
   workflow_dispatch:          # run manually to warm the demo before an interview/application
 
 jobs:
