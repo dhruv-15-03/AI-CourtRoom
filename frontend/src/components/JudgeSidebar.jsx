@@ -40,6 +40,10 @@ export default function JudgeSidebar({ mode, setMode, variant = "permanent", ope
         [`& .MuiDrawer-paper`]: {
           width: drawerWidth,
           boxSizing: "border-box",
+          // Column layout so the footer sits in normal flow instead of floating
+          // over the last nav item. See Sidebar.jsx for the same fix.
+          display: "flex",
+          flexDirection: "column",
           background:
             mode === "light"
               ? "linear-gradient(180deg, #1e3a8a 0%, #1e40af 30%, #3b82f6 100%)"
@@ -97,7 +101,7 @@ export default function JudgeSidebar({ mode, setMode, variant = "permanent", ope
         </Typography>
       </Box>
 
-      <List sx={{ pt: 1, px: 2, position: "relative", zIndex: 1 }}>
+      <List sx={{ pt: 1, px: 2, position: "relative", zIndex: 1, flexGrow: 1, minHeight: 0, overflowY: "auto" }}>
         {menuItems.map((item) => (
           <ListItemButton
             key={item.path}
@@ -175,7 +179,7 @@ export default function JudgeSidebar({ mode, setMode, variant = "permanent", ope
         </ListItemButton>
       </List>
 
-      <Box sx={{ position: "absolute", bottom: 0, left: 0, right: 0, textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.15)", background: "linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 100%)" }}>
+      <Box sx={{ mt: "auto", flexShrink: 0, position: "relative", zIndex: 1, py: 1, textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.15)", background: "linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 100%)" }}>
         <Typography variant="caption" sx={{ color: mode === "dark" ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.8)", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.5px" }}>
           © 2025 AI-Court Platform
         </Typography>
