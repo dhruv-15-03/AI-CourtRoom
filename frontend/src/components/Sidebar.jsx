@@ -47,6 +47,12 @@ const Sidebar = memo(function Sidebar({ mode, setMode }) {
         [`& .MuiDrawer-paper`]: {
           width: 280,
           boxSizing: "border-box",
+          // Column layout so the nav list can take the remaining height and the
+          // footer can sit in normal flow. Previously the footer was
+          // position:absolute;bottom:0, so it floated over the list and covered
+          // the last item (the Dark Mode toggle) at ~900px viewport heights.
+          display: "flex",
+          flexDirection: "column",
           background:
             mode === "light"
               ? "linear-gradient(180deg, #1e3a8a 0%, #1e40af 30%, #3b82f6 100%)"
@@ -123,7 +129,7 @@ const Sidebar = memo(function Sidebar({ mode, setMode }) {
         </Typography>
       </Box>
 
-      <List sx={{ pt: 1, px: 2, position: "relative", zIndex: 1 }}>
+      <List sx={{ pt: 1, px: 2, position: "relative", zIndex: 1, flexGrow: 1, minHeight: 0, overflowY: "auto" }}>
         {menuItems.map((item) => (
           <ListItemButton
             key={item.path}
@@ -276,10 +282,11 @@ const Sidebar = memo(function Sidebar({ mode, setMode }) {
 
       <Box
         sx={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
+          mt: "auto",
+          flexShrink: 0,
+          position: "relative",
+          zIndex: 1,
+          py: 1,
           textAlign: "center",
           borderTop: "1px solid rgba(255,255,255,0.15)",
           background: "linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 100%)",
